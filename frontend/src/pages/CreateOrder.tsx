@@ -2,15 +2,8 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, Address, PlaceSuggestion, User } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import ExecutorPicker from '../components/ExecutorPicker'
 import UserPicker from '../components/UserPicker'
-
-const emptyForm = {
-  external_id: '',
-  description: '',
-  amount: '',
-  currency: 'EUR',
-  status: 'pending',
-}
 
 const emptyAddressForm = {
   state: '',
@@ -21,16 +14,95 @@ const emptyAddressForm = {
   is_default: false,
 }
 
+const emptyEditForm = { first_name: '', last_name: '' }
+
 const addressLine = (a: Address) =>
   [a.street, a.room ? `room ${a.room}` : ''].filter(Boolean).join(', ')
 
 const addressMeta = (a: Address) =>
   [a.city, a.state, a.postal_code].filter(Boolean).join(', ')
 
+const DURATION_UNITS = [
+  { value: 'days', label: 'Days' },
+  { value: 'weeks', label: 'Weeks' },
+  { value: 'months', label: 'Months' },
+]
+
+const MATERIAL_OPTIONS = [
+  { value: 'included', label: 'Included' },
+  { value: 'not_included', label: 'Not included' },
+  { value: 'finish_not_included', label: 'Finish not included' },
+]
+
+interface ItemDraft {
+  name: string
+  description: string
+  quantity: string
+  unit: string
+  amount: string
+  discount: string
+  tax: string
+}
+
+const ITEM_UNITS = [
+  { value: 'pc', label: 'pc' },
+  { value: 'in', label: 'in' },
+  { value: 'ft', label: 'ft' },
+  { value: 'm', label: 'm' },
+  { value: 'in2', label: 'in²' },
+  { value: 'ft2', label: 'ft²' },
+  { value: 'm2', label: 'm²' },
+]
+
+const emptyItem = (): ItemDraft => ({
+  name: '',
+  description: '',
+  quantity: '1',
+  unit: 'pc',
+  amount: '',
+  discount: '',
+  tax: '',
+})
+
+function maskAmount(raw: string) {
+  if (raw === '') return ''
+  const n = Number(raw)
+  if (Number.isNaN(n)) return raw
+  const formatted = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n)
+  return raw.endsWith('.') ? `${formatted}.` : formatted
+}
+
+function unmaskAmount(masked: string) {
+  const cleaned = masked.replace(/[^\d.]/g, '')
+  const firstDot = cleaned.indexOf('.')
+  if (firstDot === -1) return cleaned
+  return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '')
+}
+
 export default function CreateOrder() {
   const navigate = useNavigate()
-  const [form, setForm] = useState(emptyForm)
   const [user, setUser] = useState<User | null>(null)
+  const [projName, setProjName] = useState('')
+  const [projStart, setProjStart] = useState('')
+  const [projDuration, setProjDuration] = useState('')
+  const [projDurationTo, setProjDurationTo] = useState('')
+  const [projDurationUnit, setProjDurationUnit] = useState('days')
+  const [projDetails, setProjDetails] = useState('')
+  const [materials, setMaterials] = useState('included')
+  const [notes, setNotes] = useState('')
+  const [comment, setComment] = useState('')
+  const [executors, setExecutors] = useState<User[]>([])
+  const [availFrom, setAvailFrom] = useState('')
+  const [availTo, setAvailTo] = useState('')
+  const [items, setItems] = useState<ItemDraft[]>([emptyItem()])
+  const [openItemMenu, setOpenItemMenu] = useState<number | null>(null)
+  const [expanded, setExpanded] = useState<Record<number, string[]>>({})
+  const [itemNotice, setItemNotice] = useState<string | null>(null)
+  const [itemNoticeError, setItemNoticeError] = useState(false)
+  const itemsRef = useRef<HTMLDivElement>(null)
   const [addresses, setAddresses] = useState<Address[]>([])
   const [addressDialog, setAddressDialog] = useState(false)
   const [addressForm, setAddressForm] = useState(emptyAddressForm)
@@ -46,6 +118,10 @@ export default function CreateOrder() {
   const [chosenAddress, setChosenAddress] = useState<Address | null>(null)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [editDialog, setEditDialog] = useState(false)
+  const [editForm, setEditForm] = useState(emptyEditForm)
+  const [editError, setEditError] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -56,6 +132,16 @@ export default function CreateOrder() {
     setChosenAddress(null)
     api.addresses(user.id).then(setAddresses).catch(() => setAddresses([]))
   }, [user])
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (itemsRef.current && !itemsRef.current.contains(e.target as Node)) {
+        setOpenItemMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
 
   useEffect(() => {
     const q = addressSearch.trim()
@@ -84,7 +170,7 @@ export default function CreateOrder() {
   const currentAddress = chosenAddress ?? addresses.find((a) => a.is_default) ?? null
 
   function openAddressDialog() {
-    setAddressForm(emptyAddressForm)
+    setAddressForm({ ...emptyAddressForm, is_default: addresses.length === 0 })
     setAddressError('')
     setAddressSearch('')
     setAddressManual(false)
@@ -106,6 +192,40 @@ export default function CreateOrder() {
     } catch {
       setAddressSearch('')
       setPlaceResults([])
+    }
+  }
+
+  function chooseAddress(a: Address) {
+    setChosenAddress(a)
+    setAddressPicker(false)
+  }
+
+  function openEditDialog() {
+    if (!user) return
+    setEditForm({
+      first_name: user.first_name,
+      last_name: user.last_name,
+    })
+    setEditError('')
+    setEditDialog(true)
+  }
+
+  async function submitEdit(e: FormEvent) {
+    e.preventDefault()
+    if (!user) return
+    setEditError('')
+    setEditSaving(true)
+    try {
+      const updated = await api.updateUser(user.id, {
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
+      })
+      setUser(updated)
+      setEditDialog(false)
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update customer')
+    } finally {
+      setEditSaving(false)
     }
   }
 
@@ -133,30 +253,110 @@ export default function CreateOrder() {
     }
   }
 
-  function set<K extends keyof typeof emptyForm>(key: K, value: string) {
-    setForm((f) => ({ ...f, [key]: value }))
-  }
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    const amount = Number(form.amount)
-    if (!amount || amount <= 0) {
-      setFormError('Enter a valid amount greater than 0.')
-      return
-    }
     setFormError('')
     setSaving(true)
     try {
+      const newProject = await api.createProject({
+        name: projName.trim() || 'Project',
+        description: projDetails,
+        start_time: projStart || null,
+        duration: Number(projDuration) || 0,
+        duration_to: Number(projDurationTo) || 0,
+        duration_unit: projDurationUnit,
+        available_from: availFrom || null,
+        available_to: availTo || null,
+      })
       await api.createOrder({
-        ...form,
-        amount: String(amount),
+        amount: '0',
+        materials,
+        notes,
+        comment,
+        executors: executors.map((u) => u.id),
+        items: items
+          .filter((i) => i.name.trim())
+          .map((i) => ({
+            name: i.name.trim(),
+            description: i.description,
+            quantity: Number(i.quantity) || 1,
+            unit: i.unit,
+            amount: i.amount || '0',
+            currency: 'EUR',
+            discount: i.discount || '0',
+            tax: i.tax || '0',
+          })),
         user: user?.id,
+        project: newProject.id,
+        address: currentAddress
+          ? {
+              source: currentAddress.id,
+              state: currentAddress.state,
+              city: currentAddress.city,
+              street: currentAddress.street,
+              room: currentAddress.room,
+              postal_code: currentAddress.postal_code,
+            }
+          : null,
       })
       navigate('/app/orders')
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create order')
       setSaving(false)
     }
+  }
+
+  function addItem() {
+    setItems((prev) => [...prev, emptyItem()])
+  }
+
+  function duplicateItem(index: number) {
+    setItems((prev) => [...prev.slice(0, index + 1), { ...prev[index] }, ...prev.slice(index + 1)])
+  }
+
+  function updateItem(index: number, patch: Partial<ItemDraft>) {
+    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
+  }
+
+  function removeItem(index: number) {
+    setItems((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function isOpen(index: number, field: string) {
+    return (expanded[index] ?? []).includes(field)
+  }
+
+  function toggleField(index: number, field: string) {
+    setExpanded((prev) => {
+      const current = prev[index] ?? []
+      const next = current.includes(field) ? current.filter((f) => f !== field) : [...current, field]
+      return { ...prev, [index]: next }
+    })
+  }
+
+  async function saveAsService(index: number) {
+    const item = items[index]
+    if (!item.name.trim()) {
+      setItemNotice('Enter an item name before saving as service.')
+      setItemNoticeError(true)
+      return
+    }
+    setOpenItemMenu(null)
+    try {
+      await api.createService({
+        name: item.name.trim(),
+        description: item.description.trim(),
+        amount: unmaskAmount(item.amount) || '0',
+        currency: 'EUR',
+        status: 'active',
+      })
+      setItemNotice(`"${item.name.trim()}" saved as service.`)
+      setItemNoticeError(false)
+    } catch (err) {
+      setItemNotice(err instanceof Error ? err.message : 'Failed to save service.')
+      setItemNoticeError(true)
+    }
+    window.setTimeout(() => setItemNotice(null), 4000)
   }
 
   return (
@@ -188,9 +388,9 @@ export default function CreateOrder() {
                 </p>
               </div>
               <div className="order-customer-actions">
-                <Link to={`/app/customers/${user.id}/edit`} className="btn-secondary btn-sm">
+                <button type="button" className="btn-secondary btn-sm" onClick={openEditDialog}>
                   Edit
-                </Link>
+                </button>
                 <button type="button" className="btn-danger" onClick={() => setUser(null)}>
                   Delete
                 </button>
@@ -221,6 +421,274 @@ export default function CreateOrder() {
             </div>
           </div>
         )}
+        <div className="project-field">
+          <h3 className="form-title">Project</h3>
+          <label>
+            Name
+            <input
+              value={projName}
+              onChange={(e) => setProjName(e.target.value)}
+              placeholder="Project name"
+            />
+          </label>
+          <div className="project-fields-row">
+            <label className="project-field-start">
+              Start time
+              <input
+                type="datetime-local"
+                value={projStart}
+                onChange={(e) => setProjStart(e.target.value)}
+              />
+            </label>
+            <label className="project-field-duration">
+              Duration
+              <span className="duration-row">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="From"
+                  value={projDuration}
+                  onChange={(e) => setProjDuration(e.target.value)}
+                />
+                <span className="muted">–</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="To"
+                  value={projDurationTo}
+                  onChange={(e) => setProjDurationTo(e.target.value)}
+                />
+                <select
+                  value={projDurationUnit}
+                  onChange={(e) => setProjDurationUnit(e.target.value)}
+                >
+                  {DURATION_UNITS.map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {u.label}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            </label>
+            <label className="project-field-duration">
+              Available
+              <span className="duration-row">
+                <input
+                  type="datetime-local"
+                  placeholder="From"
+                  value={availFrom}
+                  onChange={(e) => setAvailFrom(e.target.value)}
+                />
+                <span className="muted">–</span>
+                <input
+                  type="datetime-local"
+                  placeholder="To"
+                  value={availTo}
+                  onChange={(e) => setAvailTo(e.target.value)}
+                />
+              </span>
+            </label>
+          </div>
+          <label>
+            Project details
+            <textarea
+              rows={3}
+              value={projDetails}
+              onChange={(e) => setProjDetails(e.target.value)}
+              placeholder="Describe the project scope…"
+            />
+          </label>
+          <label>
+            Materials
+            <select value={materials} onChange={(e) => setMaterials(e.target.value)}>
+              {MATERIAL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Notes
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add notes…"
+            />
+          </label>
+          <label>
+            Comment
+            <textarea
+              rows={3}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a comment…"
+            />
+          </label>
+          <label>
+            Executors
+            <ExecutorPicker value={executors} onChange={setExecutors} />
+          </label>
+          <div className="order-items" ref={itemsRef}>
+            <span className="field-label">Items</span>
+            {itemNotice && (
+              <span className={itemNoticeError ? 'item-notice item-notice--error' : 'item-notice'}>
+                {itemNotice}
+              </span>
+            )}
+            {items.length === 0 && (
+              <p className="muted">No items yet. Add line items for this order.</p>
+            )}
+            {items.map((it, i) => (
+              <div className="order-item-row" key={i}>
+                <input
+                  className="order-item-name"
+                  placeholder="Item name"
+                  value={it.name}
+                  onChange={(e) => updateItem(i, { name: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className="item-desc-btn"
+                  title="Add description"
+                  onClick={() => toggleField(i, 'desc')}
+                >
+                  {isOpen(i, 'desc') ? '−' : '+'}
+                </button>
+                <div className="order-item-qty">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Qty"
+                    value={it.quantity}
+                    onChange={(e) => updateItem(i, { quantity: e.target.value })}
+                  />
+                  <select value={it.unit} onChange={(e) => updateItem(i, { unit: e.target.value })}>
+                    {ITEM_UNITS.map((u) => (
+                      <option key={u.value} value={u.value}>
+                        {u.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <input
+                  className="order-item-amount"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={maskAmount(it.amount)}
+                  onChange={(e) => updateItem(i, { amount: unmaskAmount(e.target.value) })}
+                />
+                <div className="item-menu">
+                  <button
+                    type="button"
+                    className="item-menu-btn"
+                    aria-label="Item actions"
+                    onClick={() => setOpenItemMenu(openItemMenu === i ? null : i)}
+                  >
+                    ⋯
+                  </button>
+                  {openItemMenu === i && (
+                    <ul className="item-menu-dropdown">
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toggleField(i, 'discount')
+                            setOpenItemMenu(null)
+                          }}
+                        >
+                          Set discount
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toggleField(i, 'tax')
+                            setOpenItemMenu(null)
+                          }}
+                        >
+                          Set tax
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => saveAsService(i)}
+                        >
+                          Save as Service
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            duplicateItem(i)
+                            setOpenItemMenu(null)
+                          }}
+                        >
+                          Duplicate
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            removeItem(i)
+                            setOpenItemMenu(null)
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    </ul>
+                  )}
+                </div>
+                {isOpen(i, 'desc') && (
+                  <textarea
+                    className="order-item-desc"
+                    placeholder="Description"
+                    rows={2}
+                    value={it.description}
+                    onChange={(e) => updateItem(i, { description: e.target.value })}
+                  />
+                )}
+                {isOpen(i, 'discount') && (
+                  <div className="order-item-panel">
+                    <span className="field-label">Discount</span>
+                    <div className="order-item-panel-control">
+                      <input
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={it.discount}
+                        onChange={(e) => updateItem(i, { discount: e.target.value })}
+                      />
+                      <span className="order-item-suffix">%</span>
+                    </div>
+                  </div>
+                )}
+                {isOpen(i, 'tax') && (
+                  <div className="order-item-panel">
+                    <span className="field-label">Tax</span>
+                    <div className="order-item-panel-control">
+                      <input
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={it.tax}
+                        onChange={(e) => updateItem(i, { tax: e.target.value })}
+                      />
+                      <span className="order-item-suffix">%</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            <button type="button" className="btn-secondary btn-sm" onClick={addItem}>
+              + Add item
+            </button>
+          </div>
+        </div>
         {addressDialog && (
           <div className="modal-overlay" onClick={() => !addressSaving && setAddressDialog(false)}>
             <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={submitAddress}>
@@ -235,6 +703,7 @@ export default function CreateOrder() {
                   value={addressSearch}
                   onChange={(e) => setAddressSearch(e.target.value)}
                   autoFocus
+                  autoComplete="new-password"
                 />
                 {placesLoading && <span className="address-search-spinner" />}
                 {addressSearch.trim() && placeResults.length > 0 && (
@@ -297,6 +766,7 @@ export default function CreateOrder() {
                 <input
                   type="checkbox"
                   checked={addressForm.is_default}
+                  disabled={addresses.length === 0}
                   onChange={(e) => setAddressForm((f) => ({ ...f, is_default: e.target.checked }))}
                 />
                 Default address
@@ -336,10 +806,7 @@ export default function CreateOrder() {
                       <button
                         type="button"
                         className={`address-picker-item${a.id === currentAddress?.id ? ' active' : ''}`}
-                        onClick={() => {
-                          setChosenAddress(a)
-                          setAddressPicker(false)
-                        }}
+                        onClick={() => chooseAddress(a)}
                       >
                         <strong>{addressLine(a)}</strong>
                         <span className="muted">
@@ -359,50 +826,35 @@ export default function CreateOrder() {
             </div>
           </div>
         )}
-        <label>
-          Description
-          <input
-            value={form.description}
-            onChange={(e) => set('description', e.target.value)}
-            placeholder="e.g. Enterprise plan"
-          />
-        </label>
-        <label>
-          Amount *
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.amount}
-            onChange={(e) => set('amount', e.target.value)}
-            placeholder="0.00"
-            required
-          />
-        </label>
-        <label>
-          Currency
-          <select value={form.currency} onChange={(e) => set('currency', e.target.value)}>
-            <option>EUR</option>
-            <option>USD</option>
-            <option>GBP</option>
-          </select>
-        </label>
-        <label>
-          Status
-          <select value={form.status} onChange={(e) => set('status', e.target.value)}>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="canceled">Canceled</option>
-          </select>
-        </label>
-        <label>
-          External ID
-          <input
-            value={form.external_id}
-            onChange={(e) => set('external_id', e.target.value)}
-            placeholder="ORD-1001"
-          />
-        </label>
+        {editDialog && user && (
+          <div className="modal-overlay" onClick={() => !editSaving && setEditDialog(false)}>
+            <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={submitEdit}>
+              <h3>Edit customer</h3>
+              <p className="muted modal-subtitle">
+                {`${user.first_name || user.username} ${user.last_name}`.trim()} (@{user.username})
+              </p>
+              <div className="form-grid">
+                <label>
+                  First name
+                  <input value={editForm.first_name} onChange={(e) => setEditForm((f) => ({ ...f, first_name: e.target.value }))} />
+                </label>
+                <label>
+                  Last name
+                  <input value={editForm.last_name} onChange={(e) => setEditForm((f) => ({ ...f, last_name: e.target.value }))} />
+                </label>
+              </div>
+              {editError && <div className="alert form-alert">{editError}</div>}
+              <div className="form-actions">
+                <button type="submit" disabled={editSaving}>
+                  {editSaving ? 'Saving…' : 'Save changes'}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setEditDialog(false)} disabled={editSaving}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
         {formError && <div className="alert form-alert">{formError}</div>}
         <div className="form-actions">
           <button type="submit" disabled={saving}>

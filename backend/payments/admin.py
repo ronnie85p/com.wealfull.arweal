@@ -1,11 +1,28 @@
 from django.contrib import admin
 
-from .models import Invoice, Order, Payment
+from .models import Invoice, Material, Order, Payment, Project, Service
+
+
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'start_time', 'duration', 'created_at']
+    list_filter = ['start_time']
+
+
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'amount', 'currency', 'status', 'created_at']
+    list_filter = ['status', 'currency']
+
+
+@admin.register(Material)
+class MaterialAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'created_at']
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['id', 'external_id', 'user', 'amount', 'currency', 'status', 'created_at']
+    list_display = ['id', 'external_id', 'user', 'project', 'amount', 'currency', 'status', 'created_at']
     list_filter = ['status', 'currency']
 
 

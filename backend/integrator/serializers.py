@@ -8,8 +8,6 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
-
-
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
 
@@ -44,15 +42,22 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 class ApiKeySerializer(serializers.ModelSerializer):
     key = serializers.CharField(read_only=True)
+    owner = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), required=False, default=serializers.CurrentUserDefault()
+    )
 
     class Meta:
         model = ApiKey
-        fields = ['id', 'name', 'key', 'active', 'created_at', 'last_used_at']
+        fields = ['id', 'owner', 'name', 'key', 'active', 'created_at', 'last_used_at']
         read_only_fields = ['created_at', 'last_used_at', 'key']
 
 
 class AddressSerializer(serializers.ModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), required=False, default=serializers.CurrentUserDefault()
+    )
+
     class Meta:
         model = Address
-        fields = ['id', 'state', 'city', 'street', 'room', 'postal_code', 'is_default', 'created_at']
+        fields = ['id', 'owner', 'state', 'city', 'street', 'room', 'postal_code', 'is_default', 'created_at']
         read_only_fields = ['id', 'created_at']

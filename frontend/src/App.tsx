@@ -16,6 +16,16 @@ import Login from './pages/Login'
 import NotAuthorized from './pages/NotAuthorized'
 import Orders from './pages/Orders'
 import Payments from './pages/Payments'
+import Services from './pages/Services'
+import CreateService from './pages/CreateService'
+import EditService from './pages/EditService'
+import Materials from './pages/Materials'
+import CreateMaterial from './pages/CreateMaterial'
+import EditMaterial from './pages/EditMaterial'
+import Projects from './pages/Projects'
+import CreateProject from './pages/CreateProject'
+import EditProject from './pages/EditProject'
+import Employers from './pages/Employers'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -42,6 +52,16 @@ export default function App() {
         <Route path="orders" element={<Orders />} />
         <Route path="orders/new" element={<CreateOrder />} />
         <Route path="orders/:id/edit" element={<EditOrder />} />
+        <Route path="services" element={<Services />} />
+        <Route path="services/new" element={<CreateService />} />
+        <Route path="services/:id/edit" element={<EditService />} />
+        <Route path="materials" element={<Materials />} />
+        <Route path="materials/new" element={<CreateMaterial />} />
+        <Route path="materials/:id/edit" element={<EditMaterial />} />
+        <Route path="projects" element={<Projects />} />
+        <Route path="projects/new" element={<CreateProject />} />
+        <Route path="projects/:id/edit" element={<EditProject />} />
+        <Route path="employers" element={<Employers />} />
         <Route path="invoices" element={<Invoices />} />
         <Route path="payments" element={<Payments />} />
       </Route>

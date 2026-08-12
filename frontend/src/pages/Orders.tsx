@@ -5,6 +5,16 @@ import { api, Order } from '../api'
 const currency = (o: Order) =>
   Number(o.amount).toLocaleString('en-US', { style: 'currency', currency: o.currency })
 
+const addressLine = (o: Order) => {
+  const a = o.address
+  if (!a) return '—'
+  const parts = [a.street, a.room ? `room ${a.room}` : ''].filter(Boolean)
+  const meta = [a.city, a.state, a.postal_code].filter(Boolean).join(', ')
+  return [parts.join(', '), meta].filter(Boolean).join(' · ')
+}
+
+const projectsLine = (o: Order) => (o.project ? `#${o.project}` : '—')
+
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter] = useState('')
@@ -51,6 +61,8 @@ export default function Orders() {
               <th>#</th>
               <th>External ID</th>
               <th>Description</th>
+              <th>Address</th>
+              <th>Projects</th>
               <th>Amount</th>
               <th>Status</th>
               <th>Created</th>
@@ -63,6 +75,8 @@ export default function Orders() {
                 <td>{o.id}</td>
                 <td>{o.external_id}</td>
                 <td>{o.description}</td>
+                <td>{addressLine(o)}</td>
+                <td>{projectsLine(o)}</td>
                 <td>{currency(o)}</td>
                 <td>
                   <span className={`badge badge-${o.status}`}>{o.status}</span>
@@ -77,7 +91,7 @@ export default function Orders() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="empty">
+                <td colSpan={9} className="empty">
                   No orders.
                 </td>
               </tr>

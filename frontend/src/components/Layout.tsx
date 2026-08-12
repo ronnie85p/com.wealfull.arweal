@@ -5,6 +5,10 @@ import { api, setToken } from '../api'
 const menu = [
   { to: '/app', label: 'Dashboard', end: true },
   { to: '/app/orders', label: 'Orders', end: false },
+  { to: '/app/services', label: 'Services', end: false },
+  { to: '/app/materials', label: 'Materials', end: false },
+  { to: '/app/projects', label: 'Projects', end: false },
+  { to: '/app/employers', label: 'Employers', end: false },
   { to: '/app/customers', label: 'Customers', end: false },
   { to: '/app/invoices', label: 'Invoices', end: false },
   { to: '/app/payments', label: 'Payments', end: false },

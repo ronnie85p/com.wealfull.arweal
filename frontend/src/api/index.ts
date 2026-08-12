@@ -1,2 +1,2 @@
 export { api, getToken, setToken } from './client'
-export type { Address, ApiKey, Invoice, Order, Payment, PlaceDetails, PlaceSuggestion, User } from './client'
+export type { Address, ApiKey, Invoice, Material, Order, OrderAddress, OrderPayload, Payment, PlaceDetails, PlaceSuggestion, Project, Service, User } from './client'

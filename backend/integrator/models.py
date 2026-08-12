@@ -8,6 +8,9 @@ class ApiKey(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='api_keys'
     )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_api_keys'
+    )
     name = models.CharField(max_length=100)
     key = models.CharField(max_length=64, unique=True, editable=False)
     active = models.BooleanField(default=True)
@@ -26,6 +29,9 @@ class ApiKey(models.Model):
 class Address(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses'
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_addresses'
     )
     state = models.CharField(max_length=120, blank=True)
     city = models.CharField(max_length=120)

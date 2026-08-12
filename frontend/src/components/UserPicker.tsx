@@ -43,11 +43,18 @@ export default function UserPicker({ value, onChange }: UserPickerProps) {
   }, [])
 
   useEffect(() => {
+    if (value) {
+      setQuery('')
+      setOpen(false)
+    }
+  }, [value])
+
+  useEffect(() => {
     const term = query.trim()
     setLoading(true)
     const timer = setTimeout(() => {
-      api
-        .searchUsers(term)
+      const req = term ? api.searchUsers(term) : api.recentUsers()
+      req
         .then((r) => {
           setResults(r)
           setActive(-1)
@@ -77,9 +84,12 @@ export default function UserPicker({ value, onChange }: UserPickerProps) {
       e.preventDefault()
       setActive((i) => Math.max(i - 1, -1))
     } else if (e.key === 'Enter') {
-      if (open && active >= 0 && results[active]) {
-        e.preventDefault()
-        pick(results[active])
+      if (open && results.length > 0) {
+        const target = active >= 0 ? results[active] : results[0]
+        if (target) {
+          e.preventDefault()
+          pick(target)
+        }
       }
     } else if (e.key === 'Escape') {
       setOpen(false)
@@ -103,6 +113,8 @@ export default function UserPicker({ value, onChange }: UserPickerProps) {
       })
       onChange(user)
       setShowCreate(false)
+      setQuery('')
+      setOpen(false)
       setForm({ username: '', password: '', first_name: '', last_name: '', email: '' })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user')
@@ -114,48 +126,36 @@ export default function UserPicker({ value, onChange }: UserPickerProps) {
   return (
     <div className="user-picker" ref={rootRef}>
       <div className="user-picker-row">
-        {value ? (
-          <div className="chip">
-            <span>
-              {value.first_name || value.username} {value.last_name}{' '}
-              <small>({value.username})</small>
-            </span>
-            <button type="button" className="chip-x" onClick={() => onChange(null)}>
-              ×
-            </button>
-          </div>
-        ) : (
-          <div className="user-search">
-            <input
-              ref={inputRef}
-              placeholder="Search customer by name or email…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={openOnFocus}
-              onKeyDown={onKeyDown}
-              autoComplete="off"
-            />
-            {loading && <span className="user-hint">Searching…</span>}
-            {open && results.length > 0 && (
-              <ul className="user-results">
-                {results.map((u, i) => (
-                  <li
-                    key={u.id}
-                    className={i === active ? 'active' : ''}
-                    onMouseDown={() => pick(u)}
-                    onMouseEnter={() => setActive(i)}
-                  >
-                    {highlight(u.first_name || u.username, query.trim())} {u.last_name}
-                    <small>{u.email || u.username}</small>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {open && !loading && results.length === 0 && (
-              <div className="user-empty">No customers found.</div>
-            )}
-          </div>
-        )}
+        <div className="user-search">
+          <input
+            ref={inputRef}
+            placeholder="Search customer by name or email…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={openOnFocus}
+            onKeyDown={onKeyDown}
+            autoComplete="new-password"
+          />
+          {loading && <span className="user-hint">Searching…</span>}
+          {open && results.length > 0 && (
+            <ul className="user-results">
+              {results.map((u, i) => (
+                <li
+                  key={u.id}
+                  className={i === active ? 'active' : ''}
+                  onMouseDown={() => pick(u)}
+                  onMouseEnter={() => setActive(i)}
+                >
+                  {highlight(u.first_name || u.username, query.trim())} {u.last_name}
+                  <small>{u.email || u.username}</small>
+                </li>
+              ))}
+            </ul>
+          )}
+          {open && !loading && results.length === 0 && (
+            <div className="user-empty">No customers found.</div>
+          )}
+        </div>
         <button
           type="button"
           className="btn-secondary btn-sm user-picker-btn"

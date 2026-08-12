@@ -1,7 +1,52 @@
 from rest_framework import permissions, viewsets
 
-from .models import Invoice, Order, Payment
-from .serializers import InvoiceSerializer, OrderSerializer, PaymentSerializer
+from .models import Invoice, Material, Order, Payment, Project, Service
+from .serializers import (
+    InvoiceSerializer,
+    MaterialSerializer,
+    OrderSerializer,
+    PaymentSerializer,
+    ProjectSerializer,
+    ServiceSerializer,
+)
+
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    serializer_class = ProjectSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Project.objects.filter(owner=self.request.user)
+        search = self.request.query_params.get('search', '')
+        if search:
+            qs = qs.filter(name__icontains=search)
+        return qs.order_by('-created_at')
+
+
+class ServiceViewSet(viewsets.ModelViewSet):
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Service.objects.filter(owner=self.request.user)
+        status = self.request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+        return qs.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+class MaterialViewSet(viewsets.ModelViewSet):
+    serializer_class = MaterialSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Material.objects.filter(owner=self.request.user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save()
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -9,7 +54,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = Order.objects.filter(user=self.request.user)
+        qs = Order.objects.filter(owner=self.request.user)
         status = self.request.query_params.get('status')
         if status:
             qs = qs.filter(status=status)
@@ -24,7 +69,7 @@ class InvoiceViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = Invoice.objects.filter(user=self.request.user)
+        qs = Invoice.objects.filter(owner=self.request.user)
         status = self.request.query_params.get('status')
         if status:
             qs = qs.filter(status=status)
@@ -36,7 +81,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = Payment.objects.filter(user=self.request.user)
+        qs = Payment.objects.filter(owner=self.request.user)
         status = self.request.query_params.get('status')
         if status:
             qs = qs.filter(status=status)

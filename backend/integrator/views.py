@@ -1,10 +1,12 @@
 import json
+import logging
 import urllib.parse
 import urllib.request
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.middleware.csrf import get_token
 from rest_framework import generics, permissions, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
@@ -18,6 +20,15 @@ from .serializers import (
     UserSerializer,
     UserUpdateSerializer,
 )
+
+logger = logging.getLogger('django')
+
+
+class CsrfTokenView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({'token': get_token(request)})
 
 
 class LoginView(APIView):
@@ -80,6 +91,24 @@ class UserListView(generics.ListCreateAPIView):
         return UserSerializer
 
 
+class UserRecentView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        from django.db.models import Max
+
+        from payments.models import Order
+        if not Order.objects.exists():
+            return User.objects.filter(is_superuser=False).order_by('-date_joined')[:10]
+        return (
+            User.objects.filter(is_superuser=False)
+            .annotate(last_order=Max('orders__created_at'))
+            .filter(last_order__isnull=False)
+            .order_by('-last_order')[:5]
+        )
+
+
 class UserDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     queryset = User.objects.filter(is_superuser=False)
@@ -111,7 +140,9 @@ class AddressListCreateView(generics.ListCreateAPIView):
         return Address.objects.filter(user_id=self.kwargs['user_id'])
 
     def perform_create(self, serializer):
-        serializer.save(user_id=self.kwargs['user_id'])
+        if serializer.validated_data.get('is_default'):
+            Address.objects.filter(user_id=self.kwargs['user_id'], is_default=True).update(is_default=False)
+        serializer.save(user_id=self.kwargs['user_id'], owner=self.request.user)
 
 
 class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -121,16 +152,25 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Address.objects.filter(user_id=self.kwargs['user_id'])
 
+    def perform_update(self, serializer):
+        if serializer.validated_data.get('is_default'):
+            Address.objects.filter(user_id=self.kwargs['user_id'], is_default=True).update(is_default=False)
+        serializer.save()
+
 
 class ApiKeyViewSet(viewsets.ModelViewSet):
     serializer_class = ApiKeySerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return ApiKey.objects.filter(user=self.request.user)
+        return ApiKey.objects.filter(owner=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=self.request.user, owner=self.request.user)
+
+
+def _has_api_key(req: urllib.request.Request) -> bool:
+    return any(k.lower() == 'x-goog-api-key' for k in req.headers)
 
 
 def _places_api_key():
@@ -153,6 +193,12 @@ class PlacesAutocompleteView(APIView):
             data=body,
             headers={'Content-Type': 'application/json', 'X-Goog-Api-Key': key},
             method='POST',
+        )
+        logger.info(
+            'Outgoing Google Places autocomplete request: %s (API key set: %s, query=%r)',
+            req.full_url,
+            _has_api_key(req),
+            query,
         )
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -190,6 +236,12 @@ class PlacesDetailsView(APIView):
                 'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.addressComponents',
             },
             method='GET',
+        )
+        logger.info(
+            'Outgoing Google Places details request: %s (API key set: %s, place_id=%r)',
+            req.full_url,
+            _has_api_key(req),
+            place_id,
         )
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
