@@ -45,17 +45,14 @@ jobs:
             git reset --hard origin/main
           '
 
-      - name: Restart backend
+      - name: Restart backend (cPanel)
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-            cd /home/${{ secrets.SSH_USER }}/public_html &&
-            if command -v systemctl >/dev/null 2>&1 && systemctl is-active gunicorn >/dev/null 2>&1; then
-              systemctl restart gunicorn
-            elif [ -d tmp ]; then
-              touch tmp/restart.txt
-            else
-              pkill -HUP -f "gunicorn" || true
-            fi
+            set -e
+            cd /home/${{ secrets.SSH_USER }}/public_html/backend &&
+            mkdir -p tmp &&
+            touch tmp/restart.txt &&
+            echo "Passenger restart requested"
           '
 
       # - name: Upload frontend build
