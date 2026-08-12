@@ -38,17 +38,33 @@ jobs:
       - name: Deploy to server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-            cd /home/${{ secrets.SSH_USER }}/public_html && \
-            git pull origin main
+            set -e
+            cd /home/${{ secrets.SSH_USER }}/public_html &&
+            eval "$(ssh-agent -s)" && ssh-add ~/.ssh/github/id_ed25519 &&
+            git fetch origin main &&
+            git reset --hard origin/main
           '
 
-      - name: Upload frontend build
+      - name: Restart backend
         run: |
-          tar -czf frontend-dist.tar.gz -C frontend/dist .
-          scp -o StrictHostKeyChecking=no frontend-dist.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend-dist.tar.gz
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-            rm -rf /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
-            mkdir -p /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
-            tar -xzf /tmp/frontend-dist.tar.gz -C /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
-            rm /tmp/frontend-dist.tar.gz
+            cd /home/${{ secrets.SSH_USER }}/public_html &&
+            if command -v systemctl >/dev/null 2>&1 && systemctl is-active gunicorn >/dev/null 2>&1; then
+              systemctl restart gunicorn
+            elif [ -d tmp ]; then
+              touch tmp/restart.txt
+            else
+              pkill -HUP -f "gunicorn" || true
+            fi
           '
+
+      # - name: Upload frontend build
+      #   run: |
+      #     tar -czf frontend-dist.tar.gz -C frontend/dist .
+      #     scp -o StrictHostKeyChecking=no frontend-dist.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend-dist.tar.gz
+      #     ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+      #       rm -rf /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
+      #       mkdir -p /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
+      #       tar -xzf /tmp/frontend-dist.tar.gz -C /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
+      #       rm /tmp/frontend-dist.tar.gz
+      #     '
