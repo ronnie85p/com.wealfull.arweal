@@ -10,14 +10,18 @@ RewriteRule ^frontend/src(/|$) - [F,L]
 RewriteRule ^\.git(/|$) - [F,L]
 RewriteRule ^\.env$ - [F,L]
 
-# Serve existing files from the frontend build
-# ($1 avoids REQUEST_URI pitfalls: query strings, encoded chars)
-RewriteCond %{DOCUMENT_ROOT}/frontend/dist/$1 -f [OR]
-RewriteCond %{DOCUMENT_ROOT}/frontend/dist/$1 -d
-RewriteRule ^(.*)$ frontend/dist/$1 [L]
+# Serve existing files from the frontend build.
+# Relative test string resolves against the .htaccess dir (docroot).
+# [END] stops rules from re-running on the rewritten URL, so real
+# files are served as themselves instead of falling into the SPA fallback.
+RewriteCond frontend/dist/$1 -f [OR]
+RewriteCond frontend/dist/$1 -d
+RewriteRule ^(.*)$ frontend/dist/$1 [END]
 
-# SPA fallback: any other route -> index.html
-RewriteRule ^(.*)$ frontend/dist/index.html [L]
+# SPA fallback -> index.html (only for paths outside frontend/dist,
+# otherwise already-served dist files would be rewritten to index.html)
+RewriteCond %{REQUEST_URI} !^/frontend/dist/ [NC]
+RewriteRule ^(.*)$ frontend/dist/index.html [END]
 
 <FilesMatch "^\.env$">
   Require all denied
