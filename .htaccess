@@ -1,8 +1,16 @@
 RewriteEngine On
 RewriteBase /
 
-# API -> Django backend
-RewriteRule ^api(/.*)?$ http://127.0.0.1:443/api$1 [P,L]
+# API -> Django
+RewriteRule ^api(/.*)?$ http://127.0.0.1:8000/api$1 [P,L]
 
-# SPA fallback -> index.html
+# Frontend assets
+RewriteRule ^assets/(.*)$ frontend/dist/assets/$1 [L]
+
+# Existing files/directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# React SPA fallback
 RewriteRule ^(.*)$ frontend/dist/index.html [L]
