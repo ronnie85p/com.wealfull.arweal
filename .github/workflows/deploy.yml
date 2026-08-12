@@ -55,13 +55,15 @@ jobs:
             echo "Passenger restart requested"
           '
 
-      # - name: Upload frontend build
-      #   run: |
-      #     tar -czf frontend-dist.tar.gz -C frontend/dist .
-      #     scp -o StrictHostKeyChecking=no frontend-dist.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend-dist.tar.gz
-      #     ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-      #       rm -rf /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
-      #       mkdir -p /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
-      #       tar -xzf /tmp/frontend-dist.tar.gz -C /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
-      #       rm /tmp/frontend-dist.tar.gz
-      #     '
+      - name: Upload frontend build
+        run: |
+          tar -czf frontend-dist.tar.gz -C frontend/dist .
+          scp -o StrictHostKeyChecking=no frontend-dist.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend-dist.tar.gz
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+            set -e
+            rm -rf /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
+            mkdir -p /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
+            tar -xzf /tmp/frontend-dist.tar.gz -C /home/${{ secrets.SSH_USER }}/public_html/frontend/dist &&
+            rm /tmp/frontend-dist.tar.gz &&
+            echo "Frontend uploaded: $(ls /home/${{ secrets.SSH_USER }}/public_html/frontend/dist | wc -l) files"
+          '
