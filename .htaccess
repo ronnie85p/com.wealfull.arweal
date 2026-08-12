@@ -1,4 +1,5 @@
 RewriteEngine On
+RewriteBase /
 
 # API -> Django backend
 RewriteRule ^api(/.*)?$ http://127.0.0.1:443/api$1 [P,L]
@@ -10,8 +11,9 @@ RewriteRule ^\.git(/|$) - [F,L]
 RewriteRule ^\.env$ - [F,L]
 
 # Serve existing files from the frontend build
-RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -f [OR]
-RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -d
+# ($1 avoids REQUEST_URI pitfalls: query strings, encoded chars)
+RewriteCond %{DOCUMENT_ROOT}/frontend/dist/$1 -f [OR]
+RewriteCond %{DOCUMENT_ROOT}/frontend/dist/$1 -d
 RewriteRule ^(.*)$ frontend/dist/$1 [L]
 
 # SPA fallback: any other route -> index.html
@@ -19,4 +21,9 @@ RewriteRule ^(.*)$ frontend/dist/index.html [L]
 
 <FilesMatch "^\.env$">
   Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(js|mjs|css|json|woff2?|png|jpg|jpeg|gif|svg|webp|ico|map)$">
+  Header unset ETag
+  FileETag None
 </FilesMatch>
