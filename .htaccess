@@ -4,30 +4,5 @@ RewriteBase /
 # API -> Django backend
 RewriteRule ^api(/.*)?$ http://127.0.0.1:443/api$1 [P,L]
 
-# Hide backend and source files from the web
-RewriteRule ^backend(/|$) - [F,L]
-RewriteRule ^frontend/src(/|$) - [F,L]
-RewriteRule ^\.git(/|$) - [F,L]
-RewriteRule ^\.env$ - [F,L]
-
-# Serve existing files from the frontend build.
-# Relative test string resolves against the .htaccess dir (docroot).
-# [END] stops rules from re-running on the rewritten URL, so real
-# files are served as themselves instead of falling into the SPA fallback.
-RewriteCond frontend/dist/$1 -f [OR]
-RewriteCond frontend/dist/$1 -d
-RewriteRule ^(.*)$ frontend/dist/$1 [END]
-
-# SPA fallback -> index.html (only for paths outside frontend/dist,
-# otherwise already-served dist files would be rewritten to index.html)
-RewriteCond %{REQUEST_URI} !^/frontend/dist/ [NC]
-RewriteRule ^(.*)$ frontend/dist/index.html [END]
-
-<FilesMatch "^\.env$">
-  Require all denied
-</FilesMatch>
-
-<FilesMatch "\.(js|mjs|css|json|woff2?|png|jpg|jpeg|gif|svg|webp|ico|map)$">
-  Header unset ETag
-  FileETag None
-</FilesMatch>
+# SPA fallback -> index.html
+RewriteRule ^(.*)$ frontend/dist/index.html [L]
