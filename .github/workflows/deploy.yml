@@ -39,7 +39,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             set -e
-            cd /home/${{ secrets.SSH_USER }}/public_html &&
+            cd /home/arwealc2/public_html &&
             eval "$(ssh-agent -s)" && ssh-add ~/.ssh/github/id_ed25519 &&
             git fetch origin main &&
             git reset --hard origin/main
