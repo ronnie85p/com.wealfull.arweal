@@ -1,6 +1,11 @@
 from django.contrib import admin
 
-from .models import Address, ApiKey
+from .models import AccountType, Address, ApiKey
+
+
+@admin.register(AccountType)
+class AccountTypeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'description']
 
 
 @admin.register(ApiKey)

@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "*.htaccess": "apacheconf",
+    "*.htpasswd": "apacheconf"
+  }
+}

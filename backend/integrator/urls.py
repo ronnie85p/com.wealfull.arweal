@@ -20,6 +20,7 @@ urlpatterns = [
     path('auth/complete-registration/', views.CompleteRegistrationView.as_view(), name='complete-registration'),
     path('auth/me/', views.MeView.as_view(), name='me'),
     path('auth/status/', views.AuthStatusView.as_view(), name='auth-status'),
+    path('account-types/', views.AccountTypeListView.as_view(), name='account-types'),
     path('users/', views.UserListView.as_view(), name='users'),
     path('users/recent/', views.UserRecentView.as_view(), name='users-recent'),
     path('users/<int:pk>/', views.UserDetailView.as_view(), name='user-detail'),

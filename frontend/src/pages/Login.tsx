@@ -1,10 +1,11 @@
 import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import SpinnerButton from '../components/SpinnerButton'
 
 export default function Login() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('demo')
+  const [username, setUsername] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -43,10 +44,9 @@ export default function Login() {
           <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
         </label>
         {error && <div className="alert">{error}</div>}
-        <button type="submit" disabled={loading}>
+        <SpinnerButton type="submit" loading={loading}>
           {loading ? 'Signing in…' : 'Sign in'}
-        </button>
-        <p className="hint">Demo user: demo</p>
+        </SpinnerButton>
         <p className="hint">
           No account? <Link to="/register">Create one</Link>
         </p>

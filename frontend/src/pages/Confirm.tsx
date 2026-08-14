@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, setToken } from '../api'
+import SpinnerButton from '../components/SpinnerButton'
 
 const CODE_LENGTH = 6
 const CODE_TTL_MS = 900_000
@@ -282,9 +283,9 @@ export default function Confirm() {
           {expired ? (
             <>
               Code expired.{' '}
-              <button type="button" className="resend-btn" onClick={resend} disabled={resending}>
+              <SpinnerButton type="button" className="resend-btn" onClick={resend} loading={resending}>
                 {resending ? 'Sending…' : 'Resend code'}
-              </button>
+              </SpinnerButton>
             </>
           ) : resendRemaining > 0 ? (
             <>
@@ -292,15 +293,15 @@ export default function Confirm() {
               {String(resendRemaining % 60).padStart(2, '0')}
             </>
           ) : (
-            <button type="button" className="resend-btn" onClick={resend} disabled={resending}>
+            <SpinnerButton type="button" className="resend-btn" onClick={resend} loading={resending}>
               {resending ? 'Sending…' : 'Resend code'}
-            </button>
+            </SpinnerButton>
           )}
         </div>
         {error && <div className="alert">{error}</div>}
-        <button type="submit" disabled={loading || expired}>
+        <SpinnerButton type="submit" loading={loading} disabled={expired}>
           {loading ? 'Confirming…' : 'Confirm'}
-        </button>
+        </SpinnerButton>
         <p className="hint">
           <Link to={backTo}>{mode === 'login' ? 'Back to sign in' : 'Back to registration'}</Link>
         </p>

@@ -1,6 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute, { PublicRoute } from './components/ProtectedRoute'
+import PageSkeleton from './components/PageSkeleton'
+import { useAuth } from './components/AuthContext'
+import ErrorPage from './pages/Error'
 import ApiPage from './pages/Api'
 import CreateCustomer from './pages/CreateCustomer'
 import CreateOrder from './pages/CreateOrder'
@@ -31,9 +34,15 @@ import CreateProject from './pages/CreateProject'
 import EditProject from './pages/EditProject'
 import Employers from './pages/Employers'
 import CreateCompany from './pages/CreateCompany'
+import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 
 export default function App() {
+  const { loading, error } = useAuth()
+
+  if (error) return <ErrorPage />
+  if (loading) return <PageSkeleton />
+
   return (
     <Routes>
       <Route
@@ -107,6 +116,7 @@ export default function App() {
         <Route path="projects/:id/edit" element={<EditProject />} />
         <Route path="employers" element={<Employers />} />
         <Route path="companies/new" element={<CreateCompany />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="invoices" element={<Invoices />} />
         <Route path="payments" element={<Payments />} />
       </Route>

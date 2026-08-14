@@ -5,25 +5,48 @@ import { User } from '../api/client'
 interface AuthState {
   user: User | null
   authenticated: boolean
+  loading: boolean
+  error: boolean
 }
 
-const AuthContext = createContext<AuthState>({ user: null, authenticated: false })
+interface AuthProviderProps {
+  children: ReactNode
+  initial?: { user: User | null; authenticated: boolean }
+}
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ user: null, authenticated: false })
+const AuthContext = createContext<AuthState>({
+  user: null,
+  authenticated: false,
+  loading: true,
+  error: false,
+})
+
+export function AuthProvider({ children, initial }: AuthProviderProps) {
+  const [auth, setAuth] = useState<{ user: User | null; authenticated: boolean }>({
+    user: initial?.user ?? null,
+    authenticated: initial?.authenticated ?? false,
+  })
+  const [error, setError] = useState(false)
 
   useEffect(() => {
-    const check = () =>
+    let interval: ReturnType<typeof setInterval> | undefined
+    interval = setInterval(() => {
       api
         .authStatus()
-        .then((s) => setState({ user: s.user, authenticated: s.authenticated }))
-        .catch(() => undefined)
-    check()
-    const interval = setInterval(check, 5000)
-    return () => clearInterval(interval)
+        .then((s) => setAuth({ user: s.user, authenticated: s.authenticated }))
+        .catch(() => {
+          setError(true)
+          if (interval) clearInterval(interval)
+        })
+    }, 5000)
+    return () => {
+      if (interval) clearInterval(interval)
+    }
   }, [])
 
-  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ ...auth, loading: false, error }}>{children}</AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

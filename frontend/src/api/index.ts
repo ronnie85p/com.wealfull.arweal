@@ -1,2 +1,2 @@
 export { api, getCsrfToken, getToken, loadConfig, setToken } from './client'
-export type { Address, ApiKey, AppConfig, Invoice, Material, Order, OrderAddress, OrderPayload, Payment, PlaceDetails, PlaceSuggestion, Project, Service, User } from './client'
+export type { AccountType, Address, ApiKey, AppConfig, Invoice, Material, Order, OrderAddress, OrderPayload, Payment, PlaceDetails, PlaceSuggestion, Project, Service, User } from './client'

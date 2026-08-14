@@ -1,5 +1,7 @@
+import hashlib
 import json
 import logging
+import re
 import urllib.parse
 import urllib.request
 
@@ -14,7 +16,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Address, ApiKey, Company, Profile
+from .models import AccountType, Address, ApiKey, Company, Profile
 from .services import (
     LOGIN_TTL,
     REGISTER_TTL,
@@ -27,6 +29,7 @@ from .services import (
     resend_available_in,
 )
 from .serializers import (
+    AccountTypeSerializer,
     AddressSerializer,
     ApiKeySerializer,
     CompanySerializer,
@@ -75,6 +78,12 @@ class ConfigView(APIView):
             'time': timezone.now().isoformat(),
             'timezone': settings.TIME_ZONE,
         })
+
+
+class AccountTypeListView(generics.ListAPIView):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = AccountTypeSerializer
+    queryset = AccountType.objects.all()
 
 
 class LoginView(APIView):
@@ -196,7 +205,12 @@ class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        serializer = UserCreateSerializer(data=request.data)
+        email = (request.data.get('email') or '').strip().lower()
+        local = (email.split('@')[0] or 'user')
+        digest = hashlib.sha256(email.encode('utf-8')).hexdigest()[:8]
+        data = request.data.copy()
+        data['username'] = f'{local}{digest}'
+        serializer = UserCreateSerializer(data=data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
         with transaction.atomic():
@@ -282,18 +296,38 @@ class ResendCodeView(APIView):
 class CompleteRegistrationView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    def _password_ok(self, password):
+        if len(password) < 8:
+            return False
+        if not re.search(r'[A-Z]', password) or not re.search(r'[a-z]', password):
+            return False
+        if not re.search(r'\d', password):
+            return False
+        if not re.search(r'[^A-Za-z0-9]', password):
+            return False
+        return True
+
     def post(self, request):
         email = (request.data.get('email') or '').strip().lower()
         password = request.data.get('password') or ''
         two_factor = bool(request.data.get('two_factor'))
+        username = (request.data.get('username') or '').strip()
         try:
             profile = Profile.objects.get(email=email, confirmed_at__isnull=False)
         except Profile.DoesNotExist:
             return Response({'detail': 'Email not confirmed'}, status=400)
         user = profile.user
-        if len(password) < 6:
-            return Response({'detail': 'Password must be at least 6 characters'}, status=400)
-        user.set_password(password)
+        if password and not self._password_ok(password):
+            return Response(
+                {'detail': 'Password must contain 8+ characters with upper/lower case, numbers and symbols'},
+                status=400,
+            )
+        if username and len(username) < 3:
+            return Response({'detail': 'Login must be at least 3 characters'}, status=400)
+        if username:
+            user.username = username
+        if password:
+            user.set_password(password)
         user.save()
         profile.two_factor = two_factor
         profile.save(update_fields=['two_factor', 'updated_at'])

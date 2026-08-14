@@ -1,7 +1,13 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from .models import Address, ApiKey, Company
+from .models import AccountType, Address, ApiKey, Company
+
+
+class AccountTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountType
+        fields = ['id', 'name', 'description']
 
 
 class UserSerializer(serializers.ModelSerializer):

@@ -74,6 +74,16 @@ export default function Layout() {
                   <small>{userName}</small>
                 </div>
                 <div className="dropdown-divider" />
+                <button
+                  type="button"
+                  className="profile-option profile-option--neutral"
+                  onClick={() => {
+                    setProfileOpen(false)
+                    navigate('/app/settings')
+                  }}
+                >
+                  Settings
+                </button>
                 <button type="button" className="profile-option" onClick={logout}>
                   Sign out
                 </button>

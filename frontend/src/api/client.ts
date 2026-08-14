@@ -28,17 +28,25 @@ export interface AppConfig {
 }
 
 let config: AppConfig | null = null
+let configFailed = false
+
+export function isConfigFailed(): boolean {
+  return configFailed
+}
 
 export async function loadConfig(): Promise<AppConfig> {
   if (config) return config
+  configFailed = false
   try {
     const res = await fetch(configUrl(), { credentials: 'same-origin' })
     if (res.ok) {
       const data = (await res.json().catch(() => ({}))) as Partial<AppConfig>
       config = { csrf: data.csrf ?? '', locale: data.locale ?? 'en-us', time: data.time ?? '', timezone: data.timezone ?? 'UTC' }
+    } else {
+      configFailed = true
     }
   } catch {
-    // keep default config
+    configFailed = true
   }
   config = config ?? { csrf: '', locale: 'en-us', time: '', timezone: 'UTC' }
   return config
@@ -48,6 +56,31 @@ export function getCsrfToken(): string {
   return config?.csrf ?? ''
 }
 
+export interface AuthStatusResult {
+  user: User | null
+  authenticated: boolean
+  failed: boolean
+}
+
+export async function fetchAuthStatus(): Promise<AuthStatusResult> {
+  try {
+    const headers: Record<string, string> = {}
+    const token = getToken()
+    if (token) headers.Authorization = `Token ${token}`
+    const res = await fetch(apiUrl('/auth/status/'), { credentials: 'same-origin', headers })
+    if (res.ok) {
+      const data = (await res.json().catch(() => ({}))) as {
+        user?: User | null
+        authenticated?: boolean
+      }
+      return { user: data.user ?? null, authenticated: !!data.authenticated, failed: false }
+    }
+    return { user: null, authenticated: false, failed: true }
+  } catch {
+    return { user: null, authenticated: false, failed: true }
+  }
+}
+
 export interface User {
   id: number
   username: string
@@ -55,6 +88,12 @@ export interface User {
   first_name: string
   last_name: string
   online?: boolean
+}
+
+export interface AccountType {
+  id: number
+  name: string
+  description: string
 }
 
 export interface OrderAddress {
@@ -281,7 +320,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, code }),
     }),
-  register: (payload: { username: string; account_type?: string; firstname?: string; midname?: string; lastname?: string; email?: string; company_name?: string; ein?: string }) =>
+  register: (payload: { account_type?: string; firstname?: string; midname?: string; lastname?: string; email?: string; company_name?: string; ein?: string }) =>
     request<{ code: string; user: { id: number; username: string; email: string } }>('/auth/register/', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -301,13 +340,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
-  completeRegistration: (payload: { email: string; password: string; two_factor: boolean }) =>
+  completeRegistration: (payload: { email: string; username?: string; password: string; two_factor: boolean }) =>
     request<{ token: string; user: User }>('/auth/complete-registration/', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
   me: () => request<User>('/auth/me/'),
   authStatus: () => request<{ authenticated: boolean; user: User | null }>('/auth/status/'),
+  accountTypes: () => request<AccountType[]>('/account-types/'),
   searchUsers: (term: string) =>
     request<User[]>(`/users/?search=${encodeURIComponent(term)}`),
   recentUsers: () => request<User[]>('/users/recent/'),

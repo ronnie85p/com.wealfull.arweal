@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import SpinnerButton from '../components/SpinnerButton'
 
 export default function CreateCompany() {
   const navigate = useNavigate()
@@ -129,9 +130,9 @@ export default function CreateCompany() {
         )}
         {error && <div className="alert form-full">{error}</div>}
         <div className="form-actions form-full">
-          <button type="submit" className="btn primary" disabled={loading}>
+          <SpinnerButton type="submit" className="btn primary" loading={loading}>
             {loading ? 'Creating…' : 'Create company'}
-          </button>
+          </SpinnerButton>
           <Link to="/app" className="btn ghost">
             Cancel
           </Link>

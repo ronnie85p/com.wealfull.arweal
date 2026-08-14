@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, setToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
+import SpinnerButton from '../components/SpinnerButton'
 
 export default function Password() {
   const navigate = useNavigate()
@@ -46,9 +47,9 @@ export default function Password() {
           <PasswordInput value={password} onChange={setPassword} autoFocus />
         </label>
         {error && <div className="alert">{error}</div>}
-        <button type="submit" disabled={loading}>
+        <SpinnerButton type="submit" loading={loading}>
           {loading ? 'Signing in…' : 'Sign in'}
-        </button>
+        </SpinnerButton>
         <p className="hint">
           <Link to="/login">Back to sign in</Link>
         </p>
