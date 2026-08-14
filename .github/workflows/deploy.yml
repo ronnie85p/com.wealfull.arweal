@@ -10,9 +10,73 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:10.5
+        env:
+          MARIADB_DATABASE: arweal
+          MARIADB_USER: arweal
+          MARIADB_PASSWORD: arweal
+          MARIADB_ROOT_PASSWORD: rootpassword
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend tests
+        working-directory: frontend
+        run: |
+          npm ci
+          npx vitest run
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Grant test database privileges
+        run: |
+          mysql -h 127.0.0.1 -u root -prootpassword -e \
+            "GRANT ALL PRIVILEGES ON \`test_arweal\`.* TO 'arweal'@'%'; FLUSH PRIVILEGES;"
+
+      - name: Backend tests
+        working-directory: backend
+        env:
+          DB_NAME: arweal
+          DB_USER: arweal
+          DB_PASSWORD: arweal
+          DB_HOST: 127.0.0.1
+          DB_PORT: '3306'
+          DJANGO_SECRET_KEY: test-secret-key
+        run: |
+          python manage.py test --noinput
+
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    needs: test
 
     steps:
       - uses: actions/checkout@v5
