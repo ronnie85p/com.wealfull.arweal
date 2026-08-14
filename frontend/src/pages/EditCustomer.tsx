@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import PasswordField from '../components/PasswordField'
 
 const emptyForm = { username: '', password: '', first_name: '', last_name: '', email: '' }
 
@@ -77,7 +78,7 @@ export default function EditCustomer() {
           </label>
           <label>
             New password (leave empty to keep current)
-            <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="••••••" />
+            <PasswordField value={form.password} onChange={(v) => set('password', v)} placeholder="••••••" />
           </label>
           <label>
             First name

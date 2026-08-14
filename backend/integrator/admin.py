@@ -5,8 +5,7 @@ from .models import Address, ApiKey
 
 @admin.register(ApiKey)
 class ApiKeyAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'active', 'created_at', 'last_used_at']
-    list_filter = ['active']
+    list_display = ['name', 'company', 'created_at', 'updated_at']
     readonly_fields = ['key']
 
 

@@ -12,33 +12,45 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
+import pymysql
 
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / '.env')
+ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
+load_dotenv(BASE_DIR / f'.env.{ENVIRONMENT}')
 
 GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY', '')
+
+pymysql.install_as_MySQLdb()
+
+from django.db.backends.mysql.base import DatabaseWrapper
+DatabaseWrapper.check_database_version_supported = lambda self: None
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+2*--@r&0t95b^=1c7zr^@&7jyzxj+*qoiwvn+mx7!4psw&4-)'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = ENVIRONMENT == 'development'
 
-ALLOWED_HOSTS = ['*']
+DJANGO_HOST = os.environ.get('DJANGO_HOST', '')
+FRONTEND_HOST = os.environ.get('FRONTEND_HOST', 'localhost')
+FRONTEND_PORT = os.environ.get('FRONTEND_PORT', '5173')
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-]
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()]
+if not ALLOWED_HOSTS and DJANGO_HOST:
+    ALLOWED_HOSTS = [DJANGO_HOST, '127.0.0.1']
+ALLOWED_HOSTS = ALLOWED_HOSTS or ['*']
 
+CORS_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get('DJANGO_CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
+if not CORS_ALLOWED_ORIGINS and DJANGO_HOST:
+    CORS_ALLOWED_ORIGINS = [f'http://{FRONTEND_HOST}:{FRONTEND_PORT}', f'http://127.0.0.1:{FRONTEND_PORT}']
 
 # Application definition
 
@@ -102,11 +114,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DB_NAME', ''),
+        'USER': os.environ.get('DB_USER', ''),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
+        'OPTIONS': {'charset': 'utf8mb4'},
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators

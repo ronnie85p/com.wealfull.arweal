@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mariadb:10.5.29
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-rootpassword}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-arweal}
+      MARIADB_USER: ${MARIADB_USER:-arweal}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-arweal}
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.development
+    environment:
+      ENVIRONMENT: development
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-arweal}
+      DB_USER: ${DB_USER:-arweal}
+      DB_PASSWORD: ${DB_PASSWORD:-arweal}
+      DJANGO_PORT: ${DJANGO_PORT:-8000}
+    ports:
+      - "${DJANGO_PORT:-8000}:${DJANGO_PORT:-8000}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:

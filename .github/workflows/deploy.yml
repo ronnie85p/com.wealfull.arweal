@@ -45,6 +45,18 @@ jobs:
             git reset --hard origin/main
           '
 
+      - name: Apply fresh migrations
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+            set -e
+            cd /home/${{ secrets.SSH_USER }}/public_html/backend
+            PY=python3
+            if [ -x venv/bin/python ]; then PY=$PWD/venv/bin/python; fi
+            if [ -x ../venv/bin/python ]; then PY=$(cd .. && pwd)/venv/bin/python; fi
+            echo "Running migrations with: $PY"
+            ENVIRONMENT=production "$PY" manage.py migrate --noinput
+          '
+
       - name: Restart backend (cPanel)
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '

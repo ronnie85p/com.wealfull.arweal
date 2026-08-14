@@ -13,7 +13,7 @@ class OrderAddressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderAddress
-        fields = ['id', 'source', 'state', 'city', 'street', 'room', 'postal_code', 'created_at']
+        fields = ['id', 'source', 'country', 'state', 'city', 'street', 'building', 'unit', 'zip', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 

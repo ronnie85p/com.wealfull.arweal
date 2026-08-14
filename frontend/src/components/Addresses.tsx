@@ -3,11 +3,13 @@ import { Address } from '../api'
 import { api } from '../api'
 
 const emptyForm = {
+  country: '',
   state: '',
   city: '',
   street: '',
-  room: '',
-  postal_code: '',
+  building: '',
+  unit: '',
+  zip: '',
   is_default: false,
 }
 
@@ -36,11 +38,13 @@ export default function Addresses({ userId, showHeading = true }: AddressesProps
   function startEdit(a: Address) {
     setEditing(a)
     setForm({
+      country: a.country,
       state: a.state,
       city: a.city,
       street: a.street,
-      room: a.room,
-      postal_code: a.postal_code,
+      building: a.building,
+      unit: a.unit,
+      zip: a.zip,
       is_default: a.is_default,
     })
   }
@@ -92,11 +96,13 @@ export default function Addresses({ userId, showHeading = true }: AddressesProps
       {editing && (
         <div className="address-form">
           <div className="create-user-grid">
+            <input placeholder="Country" value={form.country} onChange={(e) => set('country', e.target.value)} />
             <input placeholder="State" value={form.state} onChange={(e) => set('state', e.target.value)} />
             <input placeholder="City *" value={form.city} onChange={(e) => set('city', e.target.value)} />
             <input placeholder="Street *" value={form.street} onChange={(e) => set('street', e.target.value)} />
-            <input placeholder="Room" value={form.room} onChange={(e) => set('room', e.target.value)} />
-            <input placeholder="Zip" value={form.postal_code} onChange={(e) => set('postal_code', e.target.value)} />
+            <input placeholder="Building" value={form.building} onChange={(e) => set('building', e.target.value)} />
+            <input placeholder="Unit" value={form.unit} onChange={(e) => set('unit', e.target.value)} />
+            <input placeholder="Zip" value={form.zip} onChange={(e) => set('zip', e.target.value)} />
           </div>
           <label className="checkbox-label">
             <input
@@ -130,10 +136,10 @@ export default function Addresses({ userId, showHeading = true }: AddressesProps
           {items.map((a) => (
             <tr key={a.id}>
               <td>
-                {a.street}
-                {a.room ? `, room ${a.room}` : ''} · {a.city}
+                {a.building ? `${a.street} ${a.building}` : a.street}
+                {a.unit ? `, unit ${a.unit}` : ''} · {a.city}
               </td>
-              <td>{a.postal_code || '—'}</td>
+              <td>{a.zip || '—'}</td>
               <td>{a.is_default ? '✓' : '—'}</td>
               <td className="actions-cell">
                 <button className="btn-secondary btn-sm" onClick={() => startEdit(a)}>

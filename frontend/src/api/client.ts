@@ -35,11 +35,13 @@ export interface User {
 export interface OrderAddress {
   id: number
   source: number | null
+  country: string
   state: string
   city: string
   street: string
-  room: string
-  postal_code: string
+  building: string
+  unit: string
+  zip: string
 }
 
 export interface OrderItem {
@@ -131,20 +133,23 @@ export interface Payment {
 
 export interface ApiKey {
   id: number
+  company: number | null
   name: string
   key: string
-  active: boolean
+  description: string
   created_at: string
-  last_used_at: string | null
+  updated_at: string
 }
 
 export interface Address {
   id: number
+  country: string
   state: string
   city: string
   street: string
-  room: string
-  postal_code: string
+  building: string
+  unit: string
+  zip: string
   is_default: boolean
   created_at: string
 }
@@ -172,6 +177,17 @@ export interface PlaceDetails {
   postal_code: string
 }
 
+export interface Company {
+  id: number
+  name: string
+  description: string
+  ein: string
+  website: string
+  phone: string
+  created_at: string
+  updated_at: string
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const method = (options.method || 'GET').toUpperCase()
   const unsafe = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
@@ -195,16 +211,77 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     const detail = (body as Record<string, unknown>).detail
-    throw new Error(typeof detail === 'string' ? detail : `Request failed (${res.status})`)
+    if (typeof detail === 'string') throw new Error(detail)
+    if (body && typeof body === 'object') {
+      const firstFieldError = Object.values(body as Record<string, unknown>).find(
+        (v) => typeof v === 'string' || (Array.isArray(v) && typeof v[0] === 'string'),
+      )
+      if (typeof firstFieldError === 'string') throw new Error(firstFieldError)
+      if (Array.isArray(firstFieldError) && typeof firstFieldError[0] === 'string') {
+        throw new Error(firstFieldError[0])
+      }
+    }
+    throw new Error(`Request failed (${res.status})`)
   }
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
 export const api = {
-  login: (username: string, password: string) =>
+  login: (username: string) =>
     request<{ token: string; user: User }>('/auth/login/', {
       method: 'POST',
+      body: JSON.stringify({ username }),
+    }),
+  loginCheck: (username: string) =>
+    request<{ password_set: boolean; email: string }>('/auth/login/check/', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    }),
+  loginPassword: (username: string, password: string) =>
+    request<{ token: string; user: User }>('/auth/login/password/', {
+      method: 'POST',
       body: JSON.stringify({ username, password }),
+    }),
+  loginSendCode: (username: string) =>
+    request<{ code: string; expires_at: string; email: string }>('/auth/login/send-code/', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    }),
+  loginCheckCode: (email: string) =>
+    request<{ active: boolean; expires_at?: string }>('/auth/login/check-code/', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  loginConfirm: (email: string, code: string) =>
+    request<{ token: string; user: User }>('/auth/login/confirm/', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    }),
+  register: (payload: { username: string; account_type?: string; firstname?: string; midname?: string; lastname?: string; email?: string; company_name?: string; ein?: string }) =>
+    request<{ code: string; user: { id: number; username: string; email: string } }>('/auth/register/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  confirm: (payload: { code: string; email: string; password?: string }) =>
+    request<{ detail: string }>('/auth/confirm/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  resendCode: (email: string) =>
+    request<{ code: string; expires_at: string }>('/auth/resend-code/', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  checkRegistration: (email: string) =>
+    request<{ active: boolean; expires_at?: string }>('/auth/check-registration/', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  completeRegistration: (payload: { email: string; password: string; two_factor: boolean }) =>
+    request<{ token: string; user: User }>('/auth/complete-registration/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
   me: () => request<User>('/auth/me/'),
   searchUsers: (term: string) =>
@@ -257,9 +334,20 @@ export const api = {
   invoices: () => request<Invoice[]>('/invoices/'),
   payments: () => request<Payment[]>('/payments/'),
   apiKeys: () => request<ApiKey[]>('/api-keys/'),
-  createApiKey: (name: string) =>
-    request<ApiKey>('/api-keys/', { method: 'POST', body: JSON.stringify({ name }) }),
-  toggleApiKey: (id: number, active: boolean) =>
-    request<ApiKey>(`/api-keys/${id}/`, { method: 'PATCH', body: JSON.stringify({ active }) }),
+  companies: () => request<Company[]>('/companies/'),
+  createCompany: (payload: {
+    name: string
+    ein?: string
+    description?: string
+    website?: string
+    phone?: string
+    address?: Partial<Address> | null
+  }) =>
+    request<Company>('/companies/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  createApiKey: (name: string, description = '') =>
+    request<ApiKey>('/api-keys/', { method: 'POST', body: JSON.stringify({ name, description }) }),
   deleteApiKey: (id: number) => request<void>(`/api-keys/${id}/`, { method: 'DELETE' }),
 }

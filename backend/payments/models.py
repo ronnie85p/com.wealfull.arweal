@@ -55,11 +55,13 @@ class OrderAddress(models.Model):
         blank=True,
         related_name='order_addresses',
     )
+    country = models.CharField(max_length=120, blank=True)
     state = models.CharField(max_length=120, blank=True)
     city = models.CharField(max_length=120)
     street = models.CharField(max_length=255)
-    room = models.CharField(max_length=50, blank=True)
-    postal_code = models.CharField(max_length=20, blank=True)
+    building = models.CharField(max_length=50, blank=True)
+    unit = models.CharField(max_length=50, blank=True)
+    zip = models.CharField(max_length=20, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

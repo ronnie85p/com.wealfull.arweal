@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, User } from '../api'
+import PasswordField from './PasswordField'
 
 interface UserPickerProps {
   value: User | null
@@ -172,11 +173,10 @@ export default function UserPicker({ value, onChange }: UserPickerProps) {
               value={form.username}
               onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
             />
-            <input
-              type="password"
+            <PasswordField
               placeholder="Password * (min 6)"
               value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              onChange={(v) => setForm((f) => ({ ...f, password: v }))}
             />
             <input
               placeholder="First name"

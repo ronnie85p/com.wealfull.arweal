@@ -3,8 +3,13 @@ import { api, ApiKey } from '../api'
 
 export default function ApiPage() {
   const [keys, setKeys] = useState<ApiKey[]>([])
+  const [modalOpen, setModalOpen] = useState(false)
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [deleting, setDeleting] = useState<ApiKey | null>(null)
+  const [delBusy, setDelBusy] = useState(false)
 
   function load() {
     api.apiKeys().then(setKeys).catch((e) => setError(e.message))
@@ -12,51 +17,54 @@ export default function ApiPage() {
 
   useEffect(load, [])
 
-  async function onNew(e: FormEvent) {
+  function openModal() {
+    setName('')
+    setDescription('')
+    setError('')
+    setModalOpen(true)
+  }
+
+  async function onCreate(e: FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim() || busy) return
+    setBusy(true)
     setError('')
     try {
-      await api.createApiKey(name.trim())
-      setName('')
+      await api.createApiKey(name.trim(), description.trim())
+      setModalOpen(false)
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create key')
+    } finally {
+      setBusy(false)
     }
   }
 
-  async function toggle(k: ApiKey) {
+  async function remove() {
+    if (!deleting || delBusy) return
+    setDelBusy(true)
+    setError('')
     try {
-      await api.toggleApiKey(k.id, !k.active)
+      await api.deleteApiKey(deleting.id)
+      setDeleting(null)
       load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed')
-    }
-  }
-
-  async function remove(k: ApiKey) {
-    if (!confirm(`Delete API key "${k.name}"?`)) return
-    try {
-      await api.deleteApiKey(k.id)
-      load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed')
+    } finally {
+      setDelBusy(false)
     }
   }
 
   return (
     <>
-      <h1>Api</h1>
+      <h1>Api Keys</h1>
       <p className="subtitle">Manage the API keys your system uses to integrate with Wealfull.</p>
 
-      <form className="inline-form" onSubmit={onNew}>
-        <input
-          placeholder="Key name, e.g. Production"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button type="submit">Create key</button>
-      </form>
+      <div className="page-head-actions">
+        <button className="btn primary" onClick={openModal}>
+          Create key
+        </button>
+      </div>
       {error && <div className="alert">{error}</div>}
 
       <div className="panel">
@@ -66,9 +74,8 @@ export default function ApiPage() {
             <tr>
               <th>Name</th>
               <th>Key</th>
+              <th>Description</th>
               <th>Created</th>
-              <th>Last used</th>
-              <th>Active</th>
               <th />
             </tr>
           </thead>
@@ -79,15 +86,10 @@ export default function ApiPage() {
                 <td>
                   <code>{k.key}</code>
                 </td>
+                <td>{k.description || '—'}</td>
                 <td>{new Date(k.created_at).toLocaleDateString()}</td>
-                <td>{k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : '—'}</td>
                 <td>
-                  <button className={`badge badge-${k.active ? 'paid' : 'pending'}`} onClick={() => toggle(k)}>
-                    {k.active ? 'Active' : 'Inactive'}
-                  </button>
-                </td>
-                <td>
-                  <button className="btn-danger" onClick={() => remove(k)} title="Delete">
+                  <button className="btn-danger" onClick={() => setDeleting(k)} title="Delete">
                     Delete
                   </button>
                 </td>
@@ -95,7 +97,7 @@ export default function ApiPage() {
             ))}
             {keys.length === 0 && (
               <tr>
-                <td colSpan={6} className="empty">
+                <td colSpan={5} className="empty">
                   No API keys yet.
                 </td>
               </tr>
@@ -103,6 +105,69 @@ export default function ApiPage() {
           </tbody>
         </table>
       </div>
+
+      {modalOpen && (
+        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Create API key</h3>
+            <form className="modal-form" onSubmit={onCreate}>
+              <label className="field-label">
+                Name *
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Production"
+                  autoFocus
+                  required
+                />
+              </label>
+              <label className="field-label">
+                Description
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What is this key for?"
+                  rows={3}
+                />
+              </label>
+              {error && <div className="alert">{error}</div>}
+              <div className="modal-actions">
+                <button type="submit" disabled={busy || !name.trim()}>
+                  {busy ? 'Creating…' : 'Create'}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {deleting && (
+        <div className="modal-overlay" onClick={() => setDeleting(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Delete API key</h3>
+            <p className="modal-subtitle">
+              Are you sure you want to delete <strong>{deleting.name}</strong>? Any integration
+              using this key will stop working.
+            </p>
+            {error && <div className="alert">{error}</div>}
+            <div className="modal-actions">
+              <button type="button" className="btn-danger-solid" onClick={remove} disabled={delBusy}>
+                {delBusy ? 'Deleting…' : 'Delete'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setDeleting(null)}
+                disabled={delBusy}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

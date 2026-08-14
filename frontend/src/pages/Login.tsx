@@ -1,12 +1,10 @@
 import { FormEvent, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { api, setToken } from '../api'
+import { Link, useNavigate } from 'react-router-dom'
+import { api } from '../api'
 
 export default function Login() {
   const navigate = useNavigate()
-  const location = useLocation()
   const [username, setUsername] = useState('demo')
-  const [password, setPassword] = useState('demo12345')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -15,10 +13,16 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const data = await api.login(username, password)
-      setToken(data.token)
-      const from = (location.state as { from?: string } | null)?.from
-      navigate(from ?? '/app', { replace: true })
+      const data = await api.loginCheck(username)
+      if (data.password_set) {
+        navigate('/password', { state: { username } })
+        return
+      }
+      const sent = await api.loginSendCode(username)
+      localStorage.setItem('wf_code_expires_at', String(new Date(sent.expires_at).getTime()))
+      localStorage.setItem('wf_code_resend_at', String(Date.now() + 30_000))
+      localStorage.setItem('wf_registration_email', sent.email)
+      navigate('/confirm', { state: { email: sent.email, code: sent.code, mode: 'login' } })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -35,22 +39,17 @@ export default function Login() {
           <p>Sign in to your personal cabinet</p>
         </div>
         <label>
-          Username
+          Username or email
           <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
         </label>
         {error && <div className="alert">{error}</div>}
         <button type="submit" disabled={loading}>
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="hint">Demo credentials: demo / demo12345</p>
+        <p className="hint">Demo user: demo</p>
+        <p className="hint">
+          No account? <Link to="/register">Create one</Link>
+        </p>
       </form>
     </div>
   )

@@ -8,8 +8,8 @@ const currency = (o: Order) =>
 const addressLine = (o: Order) => {
   const a = o.address
   if (!a) return '—'
-  const parts = [a.street, a.room ? `room ${a.room}` : ''].filter(Boolean)
-  const meta = [a.city, a.state, a.postal_code].filter(Boolean).join(', ')
+  const parts = [a.building ? `${a.street} ${a.building}` : a.street, a.unit ? `unit ${a.unit}` : ''].filter(Boolean)
+  const meta = [a.city, a.state, a.zip].filter(Boolean).join(', ')
   return [parts.join(', '), meta].filter(Boolean).join(' · ')
 }
 

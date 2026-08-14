@@ -6,21 +6,23 @@ import ExecutorPicker from '../components/ExecutorPicker'
 import UserPicker from '../components/UserPicker'
 
 const emptyAddressForm = {
+  country: '',
   state: '',
   city: '',
   street: '',
-  room: '',
-  postal_code: '',
+  building: '',
+  unit: '',
+  zip: '',
   is_default: false,
 }
 
 const emptyEditForm = { first_name: '', last_name: '' }
 
 const addressLine = (a: Address) =>
-  [a.street, a.room ? `room ${a.room}` : ''].filter(Boolean).join(', ')
+  [a.building ? `${a.street} ${a.building}` : a.street, a.unit ? `unit ${a.unit}` : ''].filter(Boolean).join(', ')
 
 const addressMeta = (a: Address) =>
-  [a.city, a.state, a.postal_code].filter(Boolean).join(', ')
+  [a.city, a.state, a.zip].filter(Boolean).join(', ')
 
 const DURATION_UNITS = [
   { value: 'days', label: 'Days' },
@@ -185,7 +187,7 @@ export default function CreateOrder() {
         state: d.state,
         city: d.city,
         street: d.street,
-        postal_code: d.postal_code,
+        zip: d.postal_code,
       }))
       setAddressSearch('')
       setPlaceResults([])
@@ -291,11 +293,13 @@ export default function CreateOrder() {
         address: currentAddress
           ? {
               source: currentAddress.id,
+              country: currentAddress.country,
               state: currentAddress.state,
               city: currentAddress.city,
               street: currentAddress.street,
-              room: currentAddress.room,
-              postal_code: currentAddress.postal_code,
+              building: currentAddress.building,
+              unit: currentAddress.unit,
+              zip: currentAddress.zip,
             }
           : null,
       })
@@ -752,12 +756,12 @@ export default function CreateOrder() {
                       <input value={addressForm.street} onChange={(e) => setAddressForm((f) => ({ ...f, street: e.target.value }))} placeholder="Main St 12" required />
                     </label>
                     <label>
-                      Room
-                      <input value={addressForm.room} onChange={(e) => setAddressForm((f) => ({ ...f, room: e.target.value }))} placeholder="Room" />
+                      Unit
+                      <input value={addressForm.unit} onChange={(e) => setAddressForm((f) => ({ ...f, unit: e.target.value }))} placeholder="Unit" />
                     </label>
                     <label>
                       Zip
-                      <input value={addressForm.postal_code} onChange={(e) => setAddressForm((f) => ({ ...f, postal_code: e.target.value }))} placeholder="10115" />
+                      <input value={addressForm.zip} onChange={(e) => setAddressForm((f) => ({ ...f, zip: e.target.value }))} placeholder="10115" />
                     </label>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from .models import Address, ApiKey
+from .models import Address, ApiKey, Company
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -9,16 +9,19 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
 class UserCreateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email', 'password']
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data.pop('password', None)
         user = User(**validated_data)
-        user.set_password(password)
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
         user.save()
         return user
 
@@ -42,14 +45,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 class ApiKeySerializer(serializers.ModelSerializer):
     key = serializers.CharField(read_only=True)
-    owner = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), required=False, default=serializers.CurrentUserDefault()
+    company = serializers.PrimaryKeyRelatedField(
+        queryset=Company.objects.all(), required=False, allow_null=True
     )
 
     class Meta:
         model = ApiKey
-        fields = ['id', 'owner', 'name', 'key', 'active', 'created_at', 'last_used_at']
-        read_only_fields = ['created_at', 'last_used_at', 'key']
+        fields = ['id', 'company', 'name', 'key', 'description', 'created_at', 'updated_at', 'last_used_at']
+        read_only_fields = ['created_at', 'updated_at', 'last_used_at', 'key']
 
 
 class AddressSerializer(serializers.ModelSerializer):
@@ -59,5 +62,12 @@ class AddressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Address
-        fields = ['id', 'owner', 'state', 'city', 'street', 'room', 'postal_code', 'is_default', 'created_at']
+        fields = ['id', 'owner', 'country', 'state', 'city', 'street', 'building', 'unit', 'zip', 'is_default', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class CompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = ['id', 'name', 'description', 'ein', 'website', 'phone', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']

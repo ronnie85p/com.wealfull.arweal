@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from integrator.models import ApiKey
+from integrator.models import ApiKey, Company
 from payments.models import Invoice, Order, Payment
 
 FIRST_NAMES = ['Ava', 'Liam', 'Noah', 'Mia', 'Ella', 'Lucas', 'Emma', 'Lena']
@@ -31,10 +31,13 @@ class Command(BaseCommand):
         else:
             self.stdout.write('Demo user already exists, seeding data.')
 
-        if not demo.api_keys.exists():
-            ApiKey.objects.create(user=demo, name='Production', active=True)
-            ApiKey.objects.create(user=demo, name='Sandbox', active=True)
-            ApiKey.objects.create(user=demo, name='Testing (revoked)', active=False)
+        company, company_created = Company.objects.get_or_create(
+            owner=demo, defaults={'name': 'Demo Company', 'ein': '12-3456789'}
+        )
+        if not company.api_keys.exists():
+            ApiKey.objects.create(company=company, name='Production')
+            ApiKey.objects.create(company=company, name='Sandbox')
+            ApiKey.objects.create(company=company, name='Testing (revoked)')
 
         if not demo.orders.exists():
             now = timezone.now()
@@ -88,7 +91,8 @@ class Command(BaseCommand):
         # Demo key for interop/other users
         if not User.objects.filter(username='acme').exists():
             acme = User.objects.create_user(username='acme', password='acme12345')
-            ApiKey.objects.create(user=acme, name='Main API key', active=True)
+            acme_company = Company.objects.create(owner=acme, name='ACME Corp', ein='98-7654321')
+            ApiKey.objects.create(company=acme_company, name='Main API key')
             Order.objects.create(user=acme, external_id='ORD-9999', amount=199.00, currency='USD', status='paid')
 
         self.stdout.write(self.style.SUCCESS('Seeding complete.'))

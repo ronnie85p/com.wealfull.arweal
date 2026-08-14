@@ -11,7 +11,7 @@ def backfill_owners(apps, schema_editor):
     for app_label, model_name in (('payments', 'Order'), ('payments', 'Service'),
                                   ('payments', 'Project'), ('payments', 'Material'),
                                   ('payments', 'Invoice'), ('payments', 'Payment'),
-                                  ('integrator', 'ApiKey'), ('integrator', 'Address')):
+                                  ('integrator', 'Address')):
         model = apps.get_model(app_label, model_name)
         for obj in model.objects.filter(owner__isnull=True):
             obj.owner_id = obj.user_id or first_id

@@ -4,11 +4,13 @@ import { api, User } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 
 const emptyForm = {
+  country: '',
   state: '',
   city: '',
   street: '',
-  room: '',
-  postal_code: '',
+  building: '',
+  unit: '',
+  zip: '',
   is_default: false,
 }
 
@@ -40,11 +42,13 @@ export default function CustomerCreateAddress() {
     setSaving(true)
     try {
       await api.createAddress(customerId, {
+        country: form.country.trim(),
         state: form.state.trim(),
         city: form.city.trim(),
         street: form.street.trim(),
-        room: form.room.trim(),
-        postal_code: form.postal_code.trim(),
+        building: form.building.trim(),
+        unit: form.unit.trim(),
+        zip: form.zip.trim(),
         is_default: form.is_default,
       })
       navigate(`/app/customers/${customerId}/addresses`)
@@ -72,6 +76,10 @@ export default function CustomerCreateAddress() {
 
       <form className="panel form-grid" onSubmit={onSubmit}>
         <label>
+          Country
+          <input value={form.country} onChange={(e) => set('country', e.target.value)} placeholder="USA" />
+        </label>
+        <label>
           State
           <input value={form.state} onChange={(e) => set('state', e.target.value)} placeholder="State / region" />
         </label>
@@ -84,12 +92,16 @@ export default function CustomerCreateAddress() {
           <input value={form.street} onChange={(e) => set('street', e.target.value)} placeholder="Main St 12" required />
         </label>
         <label>
-          Room
-          <input value={form.room} onChange={(e) => set('room', e.target.value)} placeholder="Room / apartment" />
+          Building
+          <input value={form.building} onChange={(e) => set('building', e.target.value)} placeholder="Building" />
+        </label>
+        <label>
+          Unit
+          <input value={form.unit} onChange={(e) => set('unit', e.target.value)} placeholder="Unit / apartment" />
         </label>
         <label>
           Zip
-          <input value={form.postal_code} onChange={(e) => set('postal_code', e.target.value)} placeholder="10115" />
+          <input value={form.zip} onChange={(e) => set('zip', e.target.value)} placeholder="10115" />
         </label>
         <label className="checkbox-label form-checkbox">
           <input type="checkbox" checked={form.is_default} onChange={(e) => set('is_default', e.target.checked)} />

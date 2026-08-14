@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { api, setToken } from '../api'
+import CompanyHeader from './CompanyHeader'
 
 const menu = [
   { to: '/app', label: 'Dashboard', end: true },
@@ -14,14 +15,38 @@ const menu = [
   { to: '/app/payments', label: 'Payments', end: false },
 ]
 
-const apiItem = { to: '/app/api', label: 'Api', end: false }
+const apiItem = { to: '/app/api', label: 'Api Keys', end: false }
+
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
+}
 
 export default function Layout() {
   const navigate = useNavigate()
-  const [userName, setUserName] = useState<string | null>(null)
+  const [user, setUser] = useState<{ username: string; first_name: string; last_name: string } | null>(null)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    api.me().then((u) => setUserName(u.username)).catch(() => undefined)
+    api.me().then(setUser).catch(() => undefined)
+  }, [])
+
+  const userName = user?.username ?? 'Account'
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || userName
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
   }, [])
 
   function logout() {
@@ -31,51 +56,63 @@ export default function Layout() {
 
   return (
     <div className="layout">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">W</span>
-          <div>
-            <strong>Wealfull</strong>
-            <small>CRM</small>
+      <header className="app-header">
+        <CompanyHeader />
+        <div className="app-header-right">
+          <div className="profile-menu" ref={profileRef}>
+            <button
+              type="button"
+              className="profile-trigger"
+              onClick={() => setProfileOpen((v) => !v)}
+            >
+              <span className="profile-avatar">{initials(!user ? 'Account' : fullName)}</span>
+              <span>{fullName}</span>
+              <span className="company-caret">▾</span>
+            </button>
+            {profileOpen && (
+              <div className="profile-dropdown">
+                <div className="profile-head">
+                  <strong>{fullName}</strong>
+                  <small>{userName}</small>
+                </div>
+                <div className="dropdown-divider" />
+                <button type="button" className="profile-option" onClick={logout}>
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
         </div>
-        <nav className="nav">
-          {menu.map((item) => (
+      </header>
+      <div className="layout-body">
+        <aside className="sidebar">
+          <nav className="nav">
+            {menu.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+            <div className="nav-divider" />
             <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
+              to={apiItem.to}
+              end={apiItem.end}
               className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             >
-              {item.label}
-            </NavLink>
-          ))}
-          <div className="nav-divider" />
-          <NavLink
-            to={apiItem.to}
-            end={apiItem.end}
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-          >
-            {apiItem.label}
+{apiItem.label}
           </NavLink>
         </nav>
-        <div className="sidebar-footer">
-          <a href="#" onClick={logout} className="logout-link">
-            Sign out
-          </a>
-        </div>
       </aside>
-      <main className="content">
-        <header className="topbar">
-          <span className="topbar-title">Personal cabinet</span>
-          <Link to="/app" className="topbar-user">
-            {userName ?? 'Account'}
-          </Link>
-        </header>
-        <div className="page">
-          <Outlet />
-        </div>
-      </main>
+        <main className="content">
+          <div className="page">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
