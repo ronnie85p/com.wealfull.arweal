@@ -39,18 +39,9 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT == 'development'
 
-DJANGO_HOST = os.environ.get('DJANGO_HOST', '')
-FRONTEND_HOST = os.environ.get('FRONTEND_HOST', 'localhost')
-FRONTEND_PORT = os.environ.get('FRONTEND_PORT', '5173')
-
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()]
-if not ALLOWED_HOSTS and DJANGO_HOST:
-    ALLOWED_HOSTS = [DJANGO_HOST, '127.0.0.1']
-ALLOWED_HOSTS = ALLOWED_HOSTS or ['*']
 
 CORS_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get('DJANGO_CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
-if not CORS_ALLOWED_ORIGINS and DJANGO_HOST:
-    CORS_ALLOWED_ORIGINS = [f'http://{FRONTEND_HOST}:{FRONTEND_PORT}', f'http://127.0.0.1:{FRONTEND_PORT}']
 
 # Application definition
 
