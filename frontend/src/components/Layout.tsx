@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { setToken } from '../api'
+import { api, setToken } from '../api'
 import { useAuth } from './AuthContext'
 import CompanyHeader from './CompanyHeader'
 
@@ -29,12 +29,26 @@ function initials(name: string): string {
 
 export default function Layout() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user: ctxUser } = useAuth()
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
+  const [user, setUser] = useState(ctxUser)
 
   const userName = user?.username ?? 'Account'
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || userName
+
+  useEffect(() => {
+    setUser(ctxUser)
+  }, [ctxUser])
+
+  useEffect(() => {
+    api
+      .me()
+      .then(setUser)
+      .catch(() => {
+        /* keep context data */
+      })
+  }, [])
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -63,7 +77,10 @@ export default function Layout() {
               onClick={() => setProfileOpen((v) => !v)}
             >
               <span className="profile-avatar">{initials(!user ? 'Account' : fullName)}</span>
-              <span>{fullName}</span>
+              <span className="profile-name">
+                <span>{fullName}</span>
+                {user?.account_type && <small>{user.account_type}</small>}
+              </span>
               <span className={`status-dot ${user?.online ? 'online' : 'offline'}`} />
               <span className="company-caret">▾</span>
             </button>
@@ -71,7 +88,7 @@ export default function Layout() {
               <div className="profile-dropdown">
                 <div className="profile-head">
                   <strong>{fullName}</strong>
-                  <small>{userName}</small>
+                  {user?.account_type && <em className="profile-account-type">{user.account_type}</em>}
                 </div>
                 <div className="dropdown-divider" />
                 <button

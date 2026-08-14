@@ -20,7 +20,7 @@ describe('Register', () => {
 
   it('loads account types and renders the form', async () => {
     ;(api.accountTypes as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { id: 1, name: 'Company', description: '' },
+      { id: 1, name: 'Business', description: '' },
     ])
     render(
       <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -32,7 +32,7 @@ describe('Register', () => {
 
   it('registers without sending a username, and stores returned username', async () => {
     ;(api.accountTypes as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { id: 1, name: 'Company', description: '' },
+      { id: 1, name: 'Business', description: '' },
     ])
     ;(api.register as ReturnType<typeof vi.fn>).mockResolvedValue({
       code: '123456',
@@ -50,7 +50,7 @@ describe('Register', () => {
     await waitFor(() => {
       expect(api.register).toHaveBeenCalledWith({
         email: 'user@example.com',
-        account_type: 'Company',
+        account_type: 'Business',
         firstname: 'John',
         midname: '',
         lastname: 'Doe',
@@ -61,4 +61,5 @@ describe('Register', () => {
     expect(localStorage.getItem('wf_registration_username')).toBe('userabc12345')
   })
 })
+
 

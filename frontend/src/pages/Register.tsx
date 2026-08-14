@@ -8,7 +8,7 @@ import SelectDropdown from '../components/SelectDropdown'
 import SpinnerButton from '../components/SpinnerButton'
 
 const FALLBACK_ACCOUNT_TYPES: AccountType[] = [
-  { id: 0, name: 'Company', description: '' },
+  { id: 0, name: 'Business', description: '' },
   { id: 0, name: 'Employer', description: '' },
 ]
 
@@ -16,7 +16,7 @@ export default function Register() {
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
-  const [accountType, setAccountType] = useState('Company')
+  const [accountType, setAccountType] = useState('Business')
   const [accountTypes, setAccountTypes] = useState<AccountType[]>([])
   const [joinTo, setJoinTo] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -50,7 +50,7 @@ export default function Register() {
       return
     }
     const einDigits = ein.replace(/\D/g, '')
-    if (accountType === 'Company' && einDigits.length > 0 && einDigits.length !== EIN_LENGTH) {
+    if (accountType === 'Business' && einDigits.length > 0 && einDigits.length !== EIN_LENGTH) {
       setError(`EIN must contain ${EIN_LENGTH} digits.`)
       return
     }
@@ -67,7 +67,7 @@ export default function Register() {
         firstname,
         midname,
         lastname,
-        ...(accountType === 'Company' ? { company_name: companyName, ein } : {}),
+        ...(accountType === 'Business' ? { company_name: companyName, ein } : {}),
       })
       navigate('/confirm', { state: { email, code: data.code } })
       localStorage.setItem('wf_code_expires_at', String(Date.now() + 900_000))
@@ -97,7 +97,7 @@ export default function Register() {
               onChange={setAccountType}
             />
         </label>
-        {accountType === 'Company' && (
+        {accountType === 'Business' && (
           <>
             <label>
               Company Name
@@ -142,3 +142,4 @@ export default function Register() {
     </div>
   )
 }
+

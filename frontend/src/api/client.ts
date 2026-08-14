@@ -88,6 +88,7 @@ export interface User {
   first_name: string
   last_name: string
   online?: boolean
+  account_type?: string
 }
 
 export interface AccountType {

@@ -98,3 +98,19 @@ class AccountType(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Account(models.Model):
+    account_type = models.ForeignKey(
+        AccountType, on_delete=models.PROTECT, related_name='accounts'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='accounts'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.user.username} -> {self.account_type.name}'

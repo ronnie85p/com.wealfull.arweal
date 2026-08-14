@@ -1,7 +1,7 @@
 from django.db import migrations
 
 ACCOUNT_TYPES = [
-    ('Company', 'Company or business account'),
+    ('Business', 'Business or company account'),
     ('Employer', 'Individual employer account'),
 ]
 
@@ -25,3 +25,4 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(seed_account_types, unseed_account_types),
     ]
+

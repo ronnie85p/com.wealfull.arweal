@@ -16,7 +16,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import AccountType, Address, ApiKey, Company, Profile
+from .models import Account, AccountType, Address, ApiKey, Company, Profile
 from .services import (
     LOGIN_TTL,
     REGISTER_TTL,
@@ -223,12 +223,21 @@ class RegisterView(APIView):
                 email=request.data.get('email', ''),
             )
             code, expires_at = issue_code(profile, ttl=REGISTER_TTL)
-            if request.data.get('account_type') == 'Company' or request.data.get('company_name'):
+            is_business = (
+                request.data.get('account_type') in ('Business', 'Company')
+                or bool(request.data.get('company_name'))
+            )
+            if is_business:
                 Company.objects.create(
                     owner=user,
                     name=request.data.get('company_name', ''),
                     ein=request.data.get('ein', ''),
                 )
+            account_type = AccountType.objects.filter(
+                name='Business' if is_business else 'Employer'
+            ).first()
+            if account_type:
+                Account.objects.create(account_type=account_type, user=user)
         return Response({
             'code': code,
             'expires_at': expires_at.isoformat(),
@@ -352,12 +361,14 @@ class MeView(APIView):
         profile = Profile.objects.filter(user=user).first()
         first_name = user.first_name or (profile.firstname if profile else '') or ''
         last_name = user.last_name or (profile.lastname if profile else '') or ''
+        account = Account.objects.filter(user=user).select_related('account_type').first()
         return Response({
             'id': user.id,
             'username': user.username,
             'email': user.email,
             'first_name': first_name,
             'last_name': last_name,
+            'account_type': account.account_type.name if account else '',
         })
 
 
@@ -378,6 +389,7 @@ class AuthStatusView(APIView):
         ).total_seconds() < self.ONLINE_WINDOW_SECONDS
         first_name = request.user.first_name or profile.firstname or ''
         last_name = request.user.last_name or profile.lastname or ''
+        account = Account.objects.filter(user=request.user).select_related('account_type').first()
         return Response({
             'authenticated': True,
             'user': {
@@ -387,6 +399,7 @@ class AuthStatusView(APIView):
                 'first_name': first_name,
                 'last_name': last_name,
                 'online': online,
+                'account_type': account.account_type.name if account else '',
             },
         })
 

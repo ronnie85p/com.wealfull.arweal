@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from .models import Company, Profile
+from .models import Account, AccountType, Company, Profile
 from .services import issue_code
 
 
@@ -53,7 +53,7 @@ class RegisterTests(ApiTestCase):
             '/api/v1/auth/register/',
             {
                 'email': 'acme@example.com',
-                'account_type': 'Company',
+                'account_type': 'Business',
                 'company_name': 'Acme',
                 'ein': '123456789',
                 'firstname': 'Ann',
@@ -63,6 +63,26 @@ class RegisterTests(ApiTestCase):
         user = User.objects.get(email='acme@example.com')
         self.assertTrue(Profile.objects.filter(user=user, email='acme@example.com').exists())
         self.assertTrue(Company.objects.filter(owner=user, name='Acme', ein='123456789').exists())
+
+    def test_register_creates_account_with_requested_type(self):
+        res = self.post(
+            '/api/v1/auth/register/',
+            {'email': 'c@example.com', 'account_type': 'Business'},
+        )
+        self.assertEqual(res.status_code, 201)
+        user = User.objects.get(email='c@example.com')
+        company_type = AccountType.objects.get(name='Business')
+        self.assertTrue(Account.objects.filter(user=user, account_type=company_type).exists())
+
+    def test_register_creates_account_defaulting_to_employer(self):
+        res = self.post(
+            '/api/v1/auth/register/',
+            {'email': 'e@example.com'},
+        )
+        self.assertEqual(res.status_code, 201)
+        user = User.objects.get(email='e@example.com')
+        employer_type = AccountType.objects.get(name='Employer')
+        self.assertTrue(Account.objects.filter(user=user, account_type=employer_type).exists())
 
     def test_register_rejects_invalid_email(self):
         res = self.post(
