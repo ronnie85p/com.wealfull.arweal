@@ -25,3 +25,4 @@ urlpatterns = [
     path('api/v1/', include('integrator.urls')),
     path('api/v1/', include('payments.urls')),
 ]
+
