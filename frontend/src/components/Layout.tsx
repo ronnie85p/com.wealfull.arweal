@@ -79,7 +79,7 @@ export default function Layout() {
                   className="profile-option profile-option--neutral"
                   onClick={() => {
                     setProfileOpen(false)
-                    navigate('/app/settings')
+                    window.location.href = '/app/settings'
                   }}
                 >
                   Settings

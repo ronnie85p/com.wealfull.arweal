@@ -122,6 +122,16 @@ DATABASES = {
     }
 }
 
+# MariaDB < 10.7 has no native UUID column type; store UUIDs as char(32).
+from django.db.backends.mysql import features as _mysql_features
+
+class _MariaDBCompatFeatures(_mysql_features.DatabaseFeatures):
+    @property
+    def has_native_uuid_field(self):
+        return False
+
+DatabaseWrapper.features_class = _MariaDBCompatFeatures
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
