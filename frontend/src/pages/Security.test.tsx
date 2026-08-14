@@ -15,7 +15,7 @@ vi.mock('../api', () => ({
 function renderSecurity(stateEmail?: string) {
   const state = stateEmail ? { state: { email: stateEmail } } : undefined
   return render(
-    <MemoryRouter initialEntries={[{ ...state, pathname: '/security' }]}>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={[{ ...state, pathname: '/security' }]}>
       <Routes>
         <Route path="/security" element={<Security />} />
         <Route path="/register" element={<div>Register page</div>} />
@@ -84,3 +84,4 @@ describe('Security', () => {
     expect(api.completeRegistration).not.toHaveBeenCalled()
   })
 })
+

@@ -23,7 +23,7 @@ describe('Register', () => {
       { id: 1, name: 'Company', description: '' },
     ])
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Register />
       </MemoryRouter>,
     )
@@ -39,7 +39,7 @@ describe('Register', () => {
       user: { id: 1, username: 'userabc12345', email: 'user@example.com' },
     })
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Register />
       </MemoryRouter>,
     )
@@ -61,3 +61,4 @@ describe('Register', () => {
     expect(localStorage.getItem('wf_registration_username')).toBe('userabc12345')
   })
 })
+

@@ -15,7 +15,7 @@ vi.mock('../api', () => ({
 
 function renderSettings() {
   return render(
-    <MemoryRouter>
+    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider initial={{ user: { id: 1, username: 'user12345678', email: 'user@example.com', first_name: 'John', last_name: 'Doe' }, authenticated: true }}>
         <Settings />
       </AuthProvider>
@@ -55,3 +55,4 @@ describe('Settings', () => {
     expect(await screen.findByText('Settings saved.')).toBeInTheDocument()
   })
 })
+
