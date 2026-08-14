@@ -1,8 +1,5 @@
 RewriteEngine On
 
-# API
-RewriteRule ^api(/.*)?$ http://127.0.0.1:8000/api$1 [P,L]
-
 # Не обрабатывать напрямую уже переписанный frontend
 RewriteRule ^frontend/dist/ - [L]
 

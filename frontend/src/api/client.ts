@@ -1,5 +1,16 @@
 const TOKEN_KEY = 'wf_token'
 
+const API_PREFIX = '/a'
+const API_VERSION = 'v1'
+
+function apiUrl(path: string): string {
+  return `${API_PREFIX}/api/${API_VERSION}${path}`
+}
+
+function configUrl(): string {
+  return `${API_PREFIX}/api/config/`
+}
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
@@ -21,7 +32,7 @@ let config: AppConfig | null = null
 export async function loadConfig(): Promise<AppConfig> {
   if (config) return config
   try {
-    const res = await fetch('/api/config/', { credentials: 'same-origin' })
+    const res = await fetch(configUrl(), { credentials: 'same-origin' })
     if (res.ok) {
       const data = (await res.json().catch(() => ({}))) as Partial<AppConfig>
       config = { csrf: data.csrf ?? '', locale: data.locale ?? 'en-us', time: data.time ?? '', timezone: data.timezone ?? 'UTC' }
@@ -213,7 +224,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (token) headers.Authorization = `Token ${token}`
   if (config?.csrf) headers['X-CSRFToken'] = config.csrf
 
-  const res = await fetch(`/api/v1${path}`, { ...options, headers })
+  const res = await fetch(apiUrl(path), { ...options, headers })
 
   if (res.status === 401) {
     setToken(null)

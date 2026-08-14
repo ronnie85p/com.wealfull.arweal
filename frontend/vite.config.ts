@@ -12,9 +12,10 @@ export default defineConfig(({ mode }) => {
       host: env.VITE_HOST || 'localhost',
       port: Number(env.VITE_PORT || 5173),
       proxy: {
-        '/api': {
+        '/a/api': {
           target: `http://${proxyHost}:${proxyPort}`,
           changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/a/, ''),
         },
       },
     },
