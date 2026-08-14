@@ -52,7 +52,13 @@ jobs:
             cd /home/${{ secrets.SSH_USER }}/public_html/backend
             if [ ! -x .venv/bin/python ]; then
               echo "Creating venv..."
-              python3 -m venv .venv
+              if ! python3 -m venv .venv 2>/dev/null; then
+                echo "ensurepip unavailable, bootstrapping pip manually..."
+                rm -rf .venv
+                python3 -m venv --without-pip .venv
+                curl -sSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+                .venv/bin/python /tmp/get-pip.py
+              fi
             else
               echo "venv already exists"
             fi
