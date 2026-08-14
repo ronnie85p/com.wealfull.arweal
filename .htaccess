@@ -1,11 +1,13 @@
 RewriteEngine On
 
-# Не обрабатывать напрямую уже переписанный frontend
-RewriteRule ^frontend/dist/ - [L]
+# Django Passenger application
+RewriteRule ^a(/.*)?$ - [L]
 
-# Файлы frontend
-RewriteCond %{DOCUMENT_ROOT}/frontend/dist/$1 -f
-RewriteRule ^(.+)$ frontend/dist/$1 [L]
+# Existing files/directories (кроме корня — там должен отвечать React)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_URI} !^/$
+RewriteRule ^ - [L]
 
-# Всё остальное -> React
+# React SPA
 RewriteRule ^ frontend/dist/index.html [L]

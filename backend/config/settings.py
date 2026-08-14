@@ -19,7 +19,10 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(BASE_DIR / '.env')
+
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
+
 load_dotenv(BASE_DIR / f'.env.{ENVIRONMENT}')
 
 GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY', '')

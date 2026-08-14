@@ -52,7 +52,7 @@ jobs:
             cd /home/${{ secrets.SSH_USER }}/public_html/backend
             python=/home/${{ secrets.SSH_USER }}/virtualenv/public_html/backend/3.9/bin/python
             $python -m pip install --upgrade pip
-            $python -m pip install -r requirements.txt
+            $python -m pip install -r requirements-prod.txt
           '
 
       - name: Apply fresh migrations
