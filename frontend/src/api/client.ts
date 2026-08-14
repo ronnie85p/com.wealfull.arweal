@@ -9,19 +9,32 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY)
 }
 
-let csrfToken: string | null = null
+export interface AppConfig {
+  csrf: string
+  locale: string
+  time: string
+  timezone: string
+}
 
-async function fetchCsrfToken(): Promise<string> {
-  if (csrfToken) return csrfToken
+let config: AppConfig | null = null
+
+export async function loadConfig(): Promise<AppConfig> {
+  if (config) return config
   try {
-    const res = await fetch('/api/csrf/', { credentials: 'same-origin' })
-    if (!res.ok) return ''
-    const data = (await res.json().catch(() => ({}))) as { token?: string }
-    csrfToken = data.token ?? ''
+    const res = await fetch('/api/config/', { credentials: 'same-origin' })
+    if (res.ok) {
+      const data = (await res.json().catch(() => ({}))) as Partial<AppConfig>
+      config = { csrf: data.csrf ?? '', locale: data.locale ?? 'en-us', time: data.time ?? '', timezone: data.timezone ?? 'UTC' }
+    }
   } catch {
-    csrfToken = ''
+    // keep default config
   }
-  return csrfToken
+  config = config ?? { csrf: '', locale: 'en-us', time: '', timezone: 'UTC' }
+  return config
+}
+
+export function getCsrfToken(): string {
+  return config?.csrf ?? ''
 }
 
 export interface User {
@@ -30,6 +43,7 @@ export interface User {
   email: string
   first_name: string
   last_name: string
+  online?: boolean
 }
 
 export interface OrderAddress {
@@ -189,9 +203,7 @@ export interface Company {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const method = (options.method || 'GET').toUpperCase()
-  const unsafe = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
-  if (unsafe) await fetchCsrfToken()
+  if (config === null) await loadConfig()
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -199,9 +211,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   const token = getToken()
   if (token) headers.Authorization = `Token ${token}`
-  if (unsafe && csrfToken) headers['X-CSRFToken'] = csrfToken
+  if (config?.csrf) headers['X-CSRFToken'] = config.csrf
 
-  const res = await fetch(`/api${path}`, { ...options, headers })
+  const res = await fetch(`/api/v1${path}`, { ...options, headers })
 
   if (res.status === 401) {
     setToken(null)
@@ -284,6 +296,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   me: () => request<User>('/auth/me/'),
+  authStatus: () => request<{ authenticated: boolean; user: User | null }>('/auth/status/'),
   searchUsers: (term: string) =>
     request<User[]>(`/users/?search=${encodeURIComponent(term)}`),
   recentUsers: () => request<User[]>('/users/recent/'),

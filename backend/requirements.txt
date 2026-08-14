@@ -1,4 +1,4 @@
-Django==6.0.7
+Django>=4.2,<5.0
 python-dotenv>=1.0
 djangorestframework>=3.16
 django-cors-headers>=4.7

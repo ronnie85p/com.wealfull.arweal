@@ -65,11 +65,16 @@ def _find_profile_by_email(email: str):
     return Profile.objects.filter(user=user).first()
 
 
-class CsrfTokenView(APIView):
+class ConfigView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        return Response({'token': get_token(request)})
+        return Response({
+            'csrf': get_token(request),
+            'locale': settings.LANGUAGE_CODE,
+            'time': timezone.now().isoformat(),
+            'timezone': settings.TIME_ZONE,
+        })
 
 
 class LoginView(APIView):
@@ -319,6 +324,36 @@ class MeView(APIView):
             'email': user.email,
             'first_name': first_name,
             'last_name': last_name,
+        })
+
+
+class AuthStatusView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    ONLINE_WINDOW_SECONDS = 30
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({'authenticated': False, 'user': None})
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        now = timezone.now()
+        profile.last_seen = now
+        profile.save(update_fields=['last_seen', 'updated_at'])
+        online = profile.last_seen is not None and (
+            now - profile.last_seen
+        ).total_seconds() < self.ONLINE_WINDOW_SECONDS
+        first_name = request.user.first_name or profile.firstname or ''
+        last_name = request.user.last_name or profile.lastname or ''
+        return Response({
+            'authenticated': True,
+            'user': {
+                'id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'online': online,
+            },
         })
 
 

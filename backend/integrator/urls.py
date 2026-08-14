@@ -7,7 +7,6 @@ router = DefaultRouter()
 router.register('api-keys', views.ApiKeyViewSet, basename='api-key')
 
 urlpatterns = [
-    path('csrf/', views.CsrfTokenView.as_view(), name='csrf-token'),
     path('auth/login/', views.LoginView.as_view(), name='login'),
     path('auth/login/check/', views.LoginCheckView.as_view(), name='login-check'),
     path('auth/login/password/', views.LoginPasswordView.as_view(), name='login-password'),
@@ -20,6 +19,7 @@ urlpatterns = [
     path('auth/resend-code/', views.ResendCodeView.as_view(), name='resend-code'),
     path('auth/complete-registration/', views.CompleteRegistrationView.as_view(), name='complete-registration'),
     path('auth/me/', views.MeView.as_view(), name='me'),
+    path('auth/status/', views.AuthStatusView.as_view(), name='auth-status'),
     path('users/', views.UserListView.as_view(), name='users'),
     path('users/recent/', views.UserRecentView.as_view(), name='users-recent'),
     path('users/<int:pk>/', views.UserDetailView.as_view(), name='user-detail'),

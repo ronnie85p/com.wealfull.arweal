@@ -11,3 +11,12 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   }
   return <>{children}</>
 }
+
+export function PublicRoute({ children }: { children: ReactNode }) {
+  const token = getToken()
+
+  if (token) {
+    return <Navigate to="/app" replace />
+  }
+  return <>{children}</>
+}

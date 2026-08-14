@@ -49,18 +49,17 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             set -e
-            cd /home/${{ secrets.SSH_USER }}/public_html/backend
-            python --version
-            python -m pip install --upgrade pip
-            python -m pip install -r requirements.txt
+            cd /home/${{ secrets.SSH_USER }}/virtualenv/public_html/backend/3.9
+            bin/python -m pip install --upgrade pip
+            bin/python -m pip install -r requirements.txt
           '
 
       - name: Apply fresh migrations
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             set -e
-            cd /home/${{ secrets.SSH_USER }}/public_html/backend
-            ENVIRONMENT=production python manage.py migrate --noinput
+            cd /home/${{ secrets.SSH_USER }}/virtualenv/public_html/backend/3.9
+            ENVIRONMENT=production bin/python ../../../../public_html/backend/manage.py migrate --noinput
           '
 
       - name: Restart backend (cPanel)

@@ -246,6 +246,21 @@ h2 {
   font-size: 0.7rem;
 }
 
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.online {
+  background: #22c55e;
+}
+
+.status-dot.offline {
+  background: #9ca3af;
+}
+
 .company-dropdown {
   position: absolute;
   top: calc(100% + 6px);

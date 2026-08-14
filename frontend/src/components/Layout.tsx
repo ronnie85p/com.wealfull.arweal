@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { api, setToken } from '../api'
+import { setToken } from '../api'
+import { useAuth } from './AuthContext'
 import CompanyHeader from './CompanyHeader'
 
 const menu = [
@@ -28,13 +29,9 @@ function initials(name: string): string {
 
 export default function Layout() {
   const navigate = useNavigate()
-  const [user, setUser] = useState<{ username: string; first_name: string; last_name: string } | null>(null)
+  const { user } = useAuth()
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    api.me().then(setUser).catch(() => undefined)
-  }, [])
 
   const userName = user?.username ?? 'Account'
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || userName
@@ -67,6 +64,7 @@ export default function Layout() {
             >
               <span className="profile-avatar">{initials(!user ? 'Account' : fullName)}</span>
               <span>{fullName}</span>
+              <span className={`status-dot ${user?.online ? 'online' : 'offline'}`} />
               <span className="company-caret">▾</span>
             </button>
             {profileOpen && (

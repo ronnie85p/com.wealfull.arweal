@@ -20,6 +20,7 @@ class Profile(models.Model):
     confirmed_at = models.DateTimeField(null=True, blank=True)
     two_factor = models.BooleanField(default=False)
     code_expires_at = models.DateTimeField(null=True, blank=True)
+    last_seen = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

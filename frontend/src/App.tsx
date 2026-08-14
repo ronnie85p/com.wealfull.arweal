@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
-import ProtectedRoute from './components/ProtectedRoute'
+import ProtectedRoute, { PublicRoute } from './components/ProtectedRoute'
 import ApiPage from './pages/Api'
 import CreateCustomer from './pages/CreateCustomer'
 import CreateOrder from './pages/CreateOrder'
@@ -36,11 +36,46 @@ import NotFound from './pages/NotFound'
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/confirm" element={<Confirm />} />
-      <Route path="/password" element={<Password />} />
-      <Route path="/security" element={<Security />} />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/confirm"
+        element={
+          <PublicRoute>
+            <Confirm />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/password"
+        element={
+          <PublicRoute>
+            <Password />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/security"
+        element={
+          <PublicRoute>
+            <Security />
+          </PublicRoute>
+        }
+      />
       <Route path="/403" element={<NotAuthorized />} />
       <Route
         path="/app"
