@@ -1,6 +1,6 @@
 Django==6.1
 python-dotenv>=1.0
-djangorestframework>=3.16
+djangorestframework==3.18.0
 django-cors-headers>=4.7
 gunicorn>=23.0
 PyMySQL>=1.1
