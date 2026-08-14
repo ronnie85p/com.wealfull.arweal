@@ -7,7 +7,7 @@ import urllib.request
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.db import transaction
+from django.db import ProgrammingError, transaction
 from django.db.models import Q
 from django.middleware.csrf import get_token
 from django.utils import timezone
@@ -28,6 +28,14 @@ from .services import (
     matches,
     resend_available_in,
 )
+
+
+def account_type_name(user) -> str:
+    try:
+        account = Account.objects.filter(user=user).select_related('account_type').first()
+    except ProgrammingError:
+        return ''
+    return account.account_type.name if account else ''
 from .serializers import (
     AccountTypeSerializer,
     AddressSerializer,
@@ -237,7 +245,10 @@ class RegisterView(APIView):
                 name='Business' if is_business else 'Employer'
             ).first()
             if account_type:
-                Account.objects.create(account_type=account_type, user=user)
+                try:
+                    Account.objects.create(account_type=account_type, user=user)
+                except ProgrammingError:
+                    pass
         return Response({
             'code': code,
             'expires_at': expires_at.isoformat(),
@@ -361,14 +372,13 @@ class MeView(APIView):
         profile = Profile.objects.filter(user=user).first()
         first_name = user.first_name or (profile.firstname if profile else '') or ''
         last_name = user.last_name or (profile.lastname if profile else '') or ''
-        account = Account.objects.filter(user=user).select_related('account_type').first()
         return Response({
             'id': user.id,
             'username': user.username,
             'email': user.email,
             'first_name': first_name,
             'last_name': last_name,
-            'account_type': account.account_type.name if account else '',
+            'account_type': account_type_name(user),
         })
 
 
@@ -389,7 +399,6 @@ class AuthStatusView(APIView):
         ).total_seconds() < self.ONLINE_WINDOW_SECONDS
         first_name = request.user.first_name or profile.firstname or ''
         last_name = request.user.last_name or profile.lastname or ''
-        account = Account.objects.filter(user=request.user).select_related('account_type').first()
         return Response({
             'authenticated': True,
             'user': {
@@ -399,7 +408,7 @@ class AuthStatusView(APIView):
                 'first_name': first_name,
                 'last_name': last_name,
                 'online': online,
-                'account_type': account.account_type.name if account else '',
+                'account_type': account_type_name(request.user),
             },
         })
 
