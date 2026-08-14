@@ -50,7 +50,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             set -e
             cd /home/${{ secrets.SSH_USER }}/public_html/backend
-            python=/home/${{ secrets.SSH_USER }}/virtualenv/public_html/backend/3.9/bin/python
+            python=/home/${{ secrets.SSH_USER }}/virtualenv/public_html/backend/3.14/bin/python
             $python -m pip install --upgrade pip
             $python -m pip install -r requirements-prod.txt
           '
@@ -59,7 +59,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             set -e
-            cd /home/${{ secrets.SSH_USER }}/virtualenv/public_html/backend/3.9
+            cd /home/${{ secrets.SSH_USER }}/virtualenv/public_html/backend/3.14
             ENVIRONMENT=production bin/python ../../../../public_html/backend/manage.py migrate --noinput
           '
 
