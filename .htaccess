@@ -3,11 +3,12 @@ RewriteEngine On
 # Django Passenger application
 RewriteRule ^a(/.*)?$ - [L]
 
-# Existing files/directories (кроме корня — там должен отвечать React)
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteCond %{REQUEST_URI} !^/$
-RewriteRule ^ - [L]
+# Любой запрос -> frontend/dist/<путь>
+RewriteCond %{REQUEST_URI} !^/frontend/dist/
+RewriteRule ^(.+)$ frontend/dist/$1 [L]
 
-# React SPA
+# Не файл, и (корень или не каталог) -> index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_URI} ^/$ [OR]
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ frontend/dist/index.html [L]
