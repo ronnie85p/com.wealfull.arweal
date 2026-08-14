@@ -50,15 +50,15 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             set -e
             cd /home/${{ secrets.SSH_USER }}/public_html/backend
-            if [ ! -x venv/bin/python ]; then
+            if [ ! -x .venv/bin/python ]; then
               echo "Creating venv..."
-              python3 -m venv venv
+              python3 -m venv .venv
             else
               echo "venv already exists"
             fi
             echo "Installing dependencies..."
-            venv/bin/pip install --upgrade pip
-            venv/bin/pip install -r requirements.txt
+            .venv/bin/pip install --upgrade pip
+            .venv/bin/pip install -r requirements.txt
           '
 
       - name: Apply fresh migrations
@@ -66,7 +66,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             set -e
             cd /home/${{ secrets.SSH_USER }}/public_html/backend
-            ENVIRONMENT=production venv/bin/python manage.py migrate --noinput
+            ENVIRONMENT=production .venv/bin/python manage.py migrate --noinput
           '
 
       - name: Restart backend (cPanel)
