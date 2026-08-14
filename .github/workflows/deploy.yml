@@ -37,13 +37,17 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-            set -e
-            cd /home/${{ secrets.SSH_USER }}/public_html &&
-            eval "$(ssh-agent -s)" && ssh-add ~/.ssh/github/id_ed25519 &&
-            git fetch origin main &&
-            git reset --hard origin/main
-          '
+          ssh -o StrictHostKeyChecking=no \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+              set -e
+
+              cd /home/${{ secrets.SSH_USER }}/public_html
+
+              GIT_SSH_COMMAND="ssh -i ~/.ssh/github/id_ed25519 -o IdentitiesOnly=yes" \
+                git fetch origin main
+
+              git reset --hard origin/main
+            '
 
       - name: Install Python dependencies
         run: |
