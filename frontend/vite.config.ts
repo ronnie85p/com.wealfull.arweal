@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const proxyHost = env.API_PROXY_HOST || '127.0.0.1'
   const proxyPort = env.API_PROXY_PORT || '8000'
   return {
-    base: './',
+    base: '/',
     plugins: [react()],
     test: {
       environment: 'jsdom',
