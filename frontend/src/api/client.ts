@@ -271,7 +271,7 @@ export interface Company {
   updated_at: string
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, redirectOn401 = true): Promise<T> {
   if (config === null) await loadConfig()
 
   const headers: Record<string, string> = {
@@ -286,7 +286,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (res.status === 401) {
     setToken(null)
-    window.location.href = '/login'
+    if (redirectOn401) window.location.href = '/login'
     throw new Error('Unauthorized')
   }
   if (!res.ok) {
@@ -367,7 +367,7 @@ export const api = {
   me: () => request<User>('/auth/me/'),
   authStatus: () => request<{ authenticated: boolean; user: User | null }>('/auth/status/'),
   account: (uuid?: string) =>
-    request<Account>(uuid ? `/account/${encodeURIComponent(uuid)}` : '/account'),
+    request<Account>(uuid ? `/account/${encodeURIComponent(uuid)}` : '/account', {}, false),
   accountTypes: () => request<AccountType[]>('/account-types/'),
   searchUsers: (term: string) =>
     request<User[]>(`/users/?search=${encodeURIComponent(term)}`),
