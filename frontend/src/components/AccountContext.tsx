@@ -21,6 +21,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const match = location.pathname.match(/^\/account\/([^/]+)/)
   const requestedId = match ? match[1] : undefined
+  const isAccountPath = location.pathname === '/account' || location.pathname.startsWith('/account/')
 
   useEffect(() => {
     if (loadedUuidRef.current === requestedId) return
@@ -30,7 +31,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       loadedUuidRef.current = a.uuid
       setAccount(a)
       setAccountLoading(false)
-      if (a.uuid !== requestedId) {
+      if (isAccountPath && a.uuid !== requestedId) {
         navigate(`/account/${a.uuid}`, { replace: true })
       }
     }

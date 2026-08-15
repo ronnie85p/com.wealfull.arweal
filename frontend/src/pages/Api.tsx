@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api, ApiDomain, ApiKey } from '../api'
 import { useAccountContext } from '../components/AccountContext'
 
@@ -117,7 +118,10 @@ export default function ApiPage() {
     <>
       <h1>Api</h1>
       <p className="subtitle">Manage the API keys your system uses to integrate with Wealfull.</p>
-      <div className="alert alert-success">Add a domain to bind the key to it.</div>
+      <div className="alert alert-info">
+        For more details, see the{' '}
+        <Link to="/docs?section=api">API documentation</Link>.
+      </div>
 
       <div className="page-head-actions">
         <button className="btn primary" onClick={openKeyModal}>

@@ -7,6 +7,7 @@ import { AccountProvider } from './components/AccountContext'
 import { accountBase } from './lib/account'
 import ErrorPage from './pages/Error'
 import ApiPage from './pages/Api'
+import DocsPage from './pages/Docs'
 import CreateCustomer from './pages/CreateCustomer'
 import CreateOrder from './pages/CreateOrder'
 import CustomerAddresses from './pages/CustomerAddresses'
@@ -91,6 +92,7 @@ export default function App() {
         }
       />
       <Route path="/403" element={<NotAuthorized />} />
+      <Route path="/docs" element={<DocsPage />} />
       <Route
         path="/account"
         element={

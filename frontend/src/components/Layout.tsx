@@ -134,6 +134,12 @@ export default function Layout() {
             >
 {apiLink.label}
           </NavLink>
+          <NavLink
+            to="/docs"
+            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+          >
+            Docs
+          </NavLink>
         </nav>
       </aside>
         <main className="content">

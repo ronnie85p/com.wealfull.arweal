@@ -57,7 +57,8 @@ export default function CompanyHeader() {
   }
 
   return (
-    <div className="company-menu" ref={menuRef}>
+    <div className="company-header">
+      <div className="company-menu" ref={menuRef}>
       <button
         type="button"
         className={currentCompany ? 'company-trigger has-company' : 'company-trigger'}
@@ -112,6 +113,7 @@ export default function CompanyHeader() {
           </button>
         </div>
       )}
+      </div>
     </div>
   )
 }
