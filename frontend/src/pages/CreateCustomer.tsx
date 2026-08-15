@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import PasswordField from '../components/PasswordField'
+import { useAccountBase } from '../lib/account'
 
 const emptyForm = { username: '', password: '', first_name: '', last_name: '', email: '' }
 
 export default function CreateCustomer() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -32,7 +34,7 @@ export default function CreateCustomer() {
         last_name: form.last_name.trim(),
         email: form.email.trim(),
       })
-      navigate(`/app/customers/${user.id}`)
+      navigate(`${base}/customers/${user.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create customer')
       setSaving(false)
@@ -43,8 +45,8 @@ export default function CreateCustomer() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Customers', to: '/app/customers' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Customers', to: `${base}/customers` },
         ]}
       />
       <h1>New customer</h1>
@@ -76,7 +78,7 @@ export default function CreateCustomer() {
           <button type="submit" disabled={saving}>
             {saving ? 'Creating…' : 'Create customer'}
           </button>
-          <Link to="/app/customers" className="btn-secondary">
+          <Link to={`${base}/customers`} className="btn-secondary">
             Cancel
           </Link>
         </div>

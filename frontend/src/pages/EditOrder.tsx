@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 const emptyForm = {
   external_id: '',
@@ -13,6 +14,7 @@ const emptyForm = {
 
 export default function EditOrder() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const { id } = useParams()
   const orderId = Number(id)
 
@@ -55,7 +57,7 @@ export default function EditOrder() {
     setSaving(true)
     try {
       await api.updateOrder(orderId, { ...form, amount: String(amount) })
-      navigate('/app/orders')
+      navigate(`${base}/orders`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update order')
       setSaving(false)
@@ -66,8 +68,8 @@ export default function EditOrder() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Orders', to: '/app/orders' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Orders', to: `${base}/orders` },
         ]}
       />
       <h1>Edit order</h1>
@@ -125,7 +127,7 @@ export default function EditOrder() {
             <button type="submit" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </button>
-            <Link to="/app/orders" className="btn-secondary">
+            <Link to={`${base}/orders`} className="btn-secondary">
               Cancel
             </Link>
           </div>

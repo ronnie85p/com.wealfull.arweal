@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 const emptyForm = {
   name: '',
@@ -13,6 +14,7 @@ const emptyForm = {
 
 export default function CreateService() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -42,7 +44,7 @@ export default function CreateService() {
         currency: form.currency,
         status: form.status,
       })
-      navigate('/app/services')
+      navigate(`${base}/services`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create service')
       setSaving(false)
@@ -53,8 +55,8 @@ export default function CreateService() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Services', to: '/app/services' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Services', to: `${base}/services` },
         ]}
       />
       <h1>New service</h1>
@@ -111,7 +113,7 @@ export default function CreateService() {
           <button type="submit" disabled={saving}>
             {saving ? 'Saving…' : 'Create service'}
           </button>
-          <Link to="/app/services" className="btn-secondary">
+          <Link to={`${base}/services`} className="btn-secondary">
             Cancel
           </Link>
         </div>

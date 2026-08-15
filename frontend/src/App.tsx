@@ -3,6 +3,8 @@ import Layout from './components/Layout'
 import ProtectedRoute, { PublicRoute } from './components/ProtectedRoute'
 import PageSkeleton from './components/PageSkeleton'
 import { useAuth } from './components/AuthContext'
+import { AccountProvider } from './components/AccountContext'
+import { accountBase } from './lib/account'
 import ErrorPage from './pages/Error'
 import ApiPage from './pages/Api'
 import CreateCustomer from './pages/CreateCustomer'
@@ -38,13 +40,16 @@ import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 
 export default function App() {
-  const { loading, error } = useAuth()
+  const { loading, error, user } = useAuth()
 
   if (error) return <ErrorPage />
   if (loading) return <PageSkeleton />
 
+  const base = accountBase(user?.id)
+
   return (
-    <Routes>
+    <AccountProvider>
+      <Routes>
       <Route
         path="/login"
         element={
@@ -87,7 +92,15 @@ export default function App() {
       />
       <Route path="/403" element={<NotAuthorized />} />
       <Route
-        path="/app"
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/account/:accountId"
         element={
           <ProtectedRoute>
             <Layout />
@@ -120,8 +133,9 @@ export default function App() {
         <Route path="invoices" element={<Invoices />} />
         <Route path="payments" element={<Payments />} />
       </Route>
-      <Route path="/" element={<Navigate to="/app" replace />} />
+      <Route path="/" element={<Navigate to={base} replace />} />
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </AccountProvider>
   )
 }

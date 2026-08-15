@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from .models import AccountType, Address, ApiKey, Company
+from integrator.models import Account, AccountType, Address, ApiDomain, ApiKey, Company
 
 
 class AccountTypeSerializer(serializers.ModelSerializer):
@@ -14,6 +14,15 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    account_type = AccountTypeSerializer(read_only=True)
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Account
+        fields = ['id', 'uuid', 'account_type', 'user', 'created_at']
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
@@ -51,14 +60,27 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 class ApiKeySerializer(serializers.ModelSerializer):
     key = serializers.CharField(read_only=True)
-    company = serializers.PrimaryKeyRelatedField(
-        queryset=Company.objects.all(), required=False, allow_null=True
+    account = serializers.SlugRelatedField(slug_field='uuid', read_only=True)
+    account_id = serializers.SlugRelatedField(
+        source='account', slug_field='uuid', queryset=Account.objects.all(), required=False, allow_null=True, write_only=True
     )
 
     class Meta:
         model = ApiKey
-        fields = ['id', 'company', 'name', 'key', 'description', 'created_at', 'updated_at', 'last_used_at']
+        fields = ['id', 'account', 'account_id', 'name', 'key', 'domain', 'description', 'created_at', 'updated_at', 'last_used_at']
         read_only_fields = ['created_at', 'updated_at', 'last_used_at', 'key']
+
+
+class ApiDomainSerializer(serializers.ModelSerializer):
+    account = serializers.SlugRelatedField(slug_field='uuid', read_only=True)
+    account_id = serializers.SlugRelatedField(
+        source='account', slug_field='uuid', queryset=Account.objects.all(), required=False, allow_null=True, write_only=True
+    )
+
+    class Meta:
+        model = ApiDomain
+        fields = ['id', 'account', 'account_id', 'domain', 'description', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
 
 
 class AddressSerializer(serializers.ModelSerializer):

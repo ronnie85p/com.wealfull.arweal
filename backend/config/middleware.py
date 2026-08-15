@@ -1,5 +1,10 @@
+from urllib.parse import urlparse
+
+import ipaddress
+import socket
+
 from django.conf import settings
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.middleware.csrf import (
     InvalidTokenFormat,
     _check_token_format,
@@ -7,8 +12,16 @@ from django.middleware.csrf import (
     CSRF_TOKEN_LENGTH,
 )
 from django.utils.crypto import constant_time_compare
+from django.utils import timezone
+
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
+
+from integrator.models import ApiDomain, ApiKey
 
 UNSAFE_METHODS = ('POST', 'PUT', 'PATCH', 'DELETE')
+
+API_PREFIXES = ('/api/',)
 
 
 class CsrfHeaderMiddleware:
@@ -16,8 +29,15 @@ class CsrfHeaderMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.method in UNSAFE_METHODS and not self._header_matches(request):
-            return HttpResponseForbidden('CSRF token invalid')
+        if request.method in UNSAFE_METHODS:
+            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+            if auth_header.startswith('Bearer '):
+                return self.get_response(request)
+            source_host = _source_host(request)
+            if not source_host or source_host not in _allowed_hosts():
+                return self.get_response(request)
+            if not self._header_matches(request):
+                return HttpResponseForbidden('CSRF token invalid')
         return self.get_response(request)
 
     def _header_matches(self, request):
@@ -41,3 +61,168 @@ class CsrfHeaderMiddleware:
             return constant_time_compare(header, secret)
         except ValueError:
             return False
+
+
+class AccountAuthMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path
+        if path == '/api/v1/account' or path.startswith('/api/v1/account/'):
+            try:
+                auth = TokenAuthentication().authenticate(request)
+            except AuthenticationFailed:
+                return JsonResponse(
+                    {'detail': 'Invalid token.'},
+                    status=401,
+                )
+            user, _ = auth if auth else (None, None)
+            if user is None or not user.is_authenticated:
+                return JsonResponse(
+                    {
+                        'detail': 'Authentication credentials were not provided.',
+                        'source': _source_addr(request),
+                    },
+                    status=401,
+                )
+            request.user = user
+        return self.get_response(request)
+
+
+def _hostname(value: str) -> str:
+    if not value:
+        return ''
+    if '://' not in value:
+        value = '//' + value
+    return (urlparse(value).hostname or '').lower().rstrip('.')
+
+
+def _allowed_hosts() -> set:
+    hosts = set()
+    for origin in settings.CORS_ALLOWED_ORIGINS:
+        host = _hostname(origin)
+        if host:
+            hosts.add(host)
+    for host in getattr(settings, 'ALLOWED_HOSTS', []):
+        hosts.add(host.lower().lstrip('*.').rstrip('.'))
+    if settings.DEBUG:
+        hosts.update({'localhost', '127.0.0.1'})
+    return hosts
+
+
+def _source_host(request) -> str:
+    return _hostname(request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER') or '')
+
+
+def _host_matches(host: str, domain: str) -> bool:
+    if not host or not domain:
+        return False
+    domain = domain.lower().rstrip('.').lstrip('*.')
+    return host == domain or host.endswith('.' + domain)
+
+
+def _client_ip(request) -> str:
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
+def _is_ip(value: str) -> bool:
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        return False
+
+
+def _host_to_ip(host: str) -> str:
+    if not host or _is_ip(host):
+        return host
+    try:
+        return socket.gethostbyname(host)
+    except OSError:
+        return ''
+
+
+def _source_matches(source_host: str, allowed: str) -> bool:
+    if not source_host or not allowed:
+        return False
+    source_is_ip = _is_ip(source_host)
+    allowed_is_ip = _is_ip(allowed)
+    if source_is_ip or allowed_is_ip:
+        source_ip = _host_to_ip(source_host)
+        allowed_ip = _host_to_ip(allowed)
+        return bool(source_ip and allowed_ip and source_ip == allowed_ip)
+    return _host_matches(source_host, allowed)
+
+
+def _domain_allowed_for_key(api_key, source_host: str, client_ip: str) -> bool:
+    source = source_host or client_ip
+    if _source_matches(source, api_key.domain):
+        return True
+    domains = ApiDomain.objects.filter(account_id=api_key.account_id)
+    for d in domains:
+        if _source_matches(source, d.domain):
+            return True
+    return False
+
+
+def _source_addr(request) -> str:
+    return _source_host(request) or _client_ip(request)
+
+
+class ApiOriginAuthMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path
+        if not path.startswith(API_PREFIXES):
+            return self.get_response(request)
+
+        source_host = _source_host(request)
+        if not source_host:
+            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+            if auth_header.startswith('Bearer '):
+                token = auth_header[7:].strip()
+                api_key = ApiKey.objects.filter(key=token).select_related('account__user').first()
+                if api_key is not None and not _domain_allowed_for_key(api_key, '', _client_ip(request)):
+                    return JsonResponse(
+                        {
+                            'detail': 'Authentication credentials were not provided.',
+                            'source': _source_addr(request),
+                        },
+                        status=403,
+                    )
+            return self.get_response(request)
+        if source_host in _allowed_hosts():
+            return self.get_response(request)
+
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if not auth_header.startswith('Bearer '):
+            return JsonResponse(
+                {
+                    'detail': 'Origin is not allowed and no API key provided.',
+                    'source': _source_addr(request),
+                },
+                status=401,
+            )
+        token = auth_header[7:].strip()
+        api_key = ApiKey.objects.filter(key=token).select_related('account__user').first()
+        if api_key is None:
+            return JsonResponse({'detail': 'Invalid API key.'}, status=401)
+        source_host = source_host or _hostname(request.META.get('HTTP_REFERER') or '')
+        if not _domain_allowed_for_key(api_key, source_host, _client_ip(request)):
+            return JsonResponse(
+                {
+                    'detail': 'Authentication credentials were not provided.',
+                    'source': _source_addr(request),
+                },
+                status=403,
+            )
+        api_key.last_used_at = timezone.now()
+        api_key.save(update_fields=['last_used_at'])
+        request.user = api_key.account.user
+        return self.get_response(request)

@@ -3,10 +3,12 @@ import { Link, useParams } from 'react-router-dom'
 import { api, User } from '../api'
 import Addresses from '../components/Addresses'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 export default function CustomerAddresses() {
   const { id } = useParams()
   const customerId = Number(id)
+  const base = useAccountBase()
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -18,9 +20,9 @@ export default function CustomerAddresses() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Customers', to: '/app/customers' },
-          { label: user ? `${user.first_name || user.username} ${user.last_name}`.trim() : '…', to: `/app/customers/${customerId}` },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Customers', to: `${base}/customers` },
+          { label: user ? `${user.first_name || user.username} ${user.last_name}`.trim() : '…', to: `${base}/customers/${customerId}` },
           { label: 'Addresses' },
         ]}
       />

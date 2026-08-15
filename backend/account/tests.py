@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from .models import Account, AccountType, Company, Profile
+from integrator.models import Account, AccountType, Company, Profile
 from .services import issue_code
 
 
@@ -18,7 +18,7 @@ def expected_username(email: str) -> str:
 class ApiTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
-        cfg = self.client.get('/api/config/')
+        cfg = self.client.get('/api/config')
         self.csrf = cfg.json().get('csrf', '')
         self.client.cookies['csrftoken'] = self.csrf
 
@@ -30,7 +30,7 @@ class RegisterTests(ApiTestCase):
     def test_register_generates_username_from_email_and_hash(self):
         email = 'john.doe@example.com'
         res = self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {'email': email, 'firstname': 'John', 'lastname': 'Doe'},
         )
         self.assertEqual(res.status_code, 201)
@@ -40,7 +40,7 @@ class RegisterTests(ApiTestCase):
 
     def test_register_ignores_client_supplied_username(self):
         res = self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {'email': 'x@example.com', 'username': 'custom_login'},
         )
         self.assertEqual(res.status_code, 201)
@@ -50,7 +50,7 @@ class RegisterTests(ApiTestCase):
 
     def test_register_creates_profile_and_company(self):
         res = self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {
                 'email': 'acme@example.com',
                 'account_type': 'Business',
@@ -66,7 +66,7 @@ class RegisterTests(ApiTestCase):
 
     def test_register_creates_account_with_requested_type(self):
         res = self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {'email': 'c@example.com', 'account_type': 'Business'},
         )
         self.assertEqual(res.status_code, 201)
@@ -76,7 +76,7 @@ class RegisterTests(ApiTestCase):
 
     def test_register_creates_account_defaulting_to_employer(self):
         res = self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {'email': 'e@example.com'},
         )
         self.assertEqual(res.status_code, 201)
@@ -86,7 +86,7 @@ class RegisterTests(ApiTestCase):
 
     def test_register_rejects_invalid_email(self):
         res = self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {'email': 'not-an-email', 'firstname': 'X'},
         )
         self.assertEqual(res.status_code, 400)
@@ -96,7 +96,7 @@ class ConfirmTests(ApiTestCase):
     def setUp(self):
         super().setUp()
         self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {'email': 'bob@example.com', 'firstname': 'Bob'},
         )
         self.user = User.objects.get(email='bob@example.com')
@@ -105,7 +105,7 @@ class ConfirmTests(ApiTestCase):
     def test_confirm_with_valid_code(self):
         code, _ = issue_code(self.profile)
         res = self.post(
-            '/api/v1/auth/confirm/',
+            '/api/v1/auth/confirm',
             {'email': 'bob@example.com', 'code': code},
         )
         self.assertEqual(res.status_code, 200)
@@ -115,7 +115,7 @@ class ConfirmTests(ApiTestCase):
 
     def test_confirm_with_wrong_code(self):
         res = self.post(
-            '/api/v1/auth/confirm/',
+            '/api/v1/auth/confirm',
             {'email': 'bob@example.com', 'code': '000000'},
         )
         self.assertEqual(res.status_code, 400)
@@ -125,21 +125,21 @@ class CompleteRegistrationTests(ApiTestCase):
     def setUp(self):
         super().setUp()
         self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {'email': 'complete@example.com', 'firstname': 'C'},
         )
         self.user = User.objects.get(email='complete@example.com')
         self.profile = self.user.profile
         code, _ = issue_code(self.profile)
         self.post(
-            '/api/v1/auth/confirm/',
+            '/api/v1/auth/confirm',
             {'email': 'complete@example.com', 'code': code},
         )
         self.profile.refresh_from_db()
 
     def test_keeps_generated_username_when_blank(self):
         res = self.post(
-            '/api/v1/auth/complete-registration/',
+            '/api/v1/auth/complete-registration',
             {'email': 'complete@example.com', 'username': '', 'password': '', 'two_factor': False},
         )
         self.assertEqual(res.status_code, 200)
@@ -151,7 +151,7 @@ class CompleteRegistrationTests(ApiTestCase):
 
     def test_allows_custom_username_and_password(self):
         res = self.post(
-            '/api/v1/auth/complete-registration/',
+            '/api/v1/auth/complete-registration',
             {
                 'email': 'complete@example.com',
                 'username': 'my_login',
@@ -169,14 +169,14 @@ class CompleteRegistrationTests(ApiTestCase):
 
     def test_rejects_short_username(self):
         res = self.post(
-            '/api/v1/auth/complete-registration/',
+            '/api/v1/auth/complete-registration',
             {'email': 'complete@example.com', 'username': 'ab', 'password': '', 'two_factor': False},
         )
         self.assertEqual(res.status_code, 400)
 
     def test_rejects_weak_password(self):
         res = self.post(
-            '/api/v1/auth/complete-registration/',
+            '/api/v1/auth/complete-registration',
             {
                 'email': 'complete@example.com',
                 'username': '',
@@ -190,7 +190,7 @@ class CompleteRegistrationTests(ApiTestCase):
         self.profile.confirmed_at = None
         self.profile.save(update_fields=['confirmed_at'])
         res = self.post(
-            '/api/v1/auth/complete-registration/',
+            '/api/v1/auth/complete-registration',
             {'email': 'complete@example.com', 'username': '', 'password': '', 'two_factor': False},
         )
         self.assertEqual(res.status_code, 400)
@@ -200,14 +200,14 @@ class LoginTests(ApiTestCase):
     def setUp(self):
         super().setUp()
         self.post(
-            '/api/v1/auth/register/',
+            '/api/v1/auth/register',
             {'email': 'login@example.com', 'firstname': 'L'},
         )
         self.user = User.objects.get(email='login@example.com')
         self.profile = self.user.profile
         code, _ = issue_code(self.profile)
         self.post(
-            '/api/v1/auth/confirm/',
+            '/api/v1/auth/confirm',
             {'email': 'login@example.com', 'code': code},
         )
         self.user.set_password('Str0ng!pass')
@@ -215,7 +215,7 @@ class LoginTests(ApiTestCase):
 
     def test_login_by_username_returns_token(self):
         res = self.post(
-            '/api/v1/auth/login/',
+            '/api/v1/auth/login',
             {'username': self.user.username},
         )
         self.assertEqual(res.status_code, 200)
@@ -224,7 +224,7 @@ class LoginTests(ApiTestCase):
 
     def test_login_password(self):
         res = self.post(
-            '/api/v1/auth/login/password/',
+            '/api/v1/auth/login/password',
             {'username': self.user.username, 'password': 'Str0ng!pass'},
         )
         self.assertEqual(res.status_code, 200)
@@ -232,14 +232,14 @@ class LoginTests(ApiTestCase):
 
     def test_login_password_wrong(self):
         res = self.post(
-            '/api/v1/auth/login/password/',
+            '/api/v1/auth/login/password',
             {'username': self.user.username, 'password': 'wrong-pass'},
         )
         self.assertEqual(res.status_code, 400)
 
     def test_login_by_email(self):
         res = self.post(
-            '/api/v1/auth/login/',
+            '/api/v1/auth/login',
             {'username': 'login@example.com'},
         )
         self.assertEqual(res.status_code, 200)
@@ -247,7 +247,7 @@ class LoginTests(ApiTestCase):
 
     def test_login_check_reports_password_state(self):
         res = self.post(
-            '/api/v1/auth/login/check/',
+            '/api/v1/auth/login/check',
             {'username': self.user.username},
         )
         self.assertEqual(res.status_code, 200)

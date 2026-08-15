@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, Material } from '../api'
+import { useAccountBase } from '../lib/account'
 
 export default function Materials() {
   const [items, setItems] = useState<Material[]>([])
+  const base = useAccountBase()
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export default function Materials() {
           <h1>Materials</h1>
           <p className="page-subtitle no-margin">Your materials catalog.</p>
         </div>
-        <Link to="/app/materials/new" className="button">
+        <Link to={`${base}/materials/new`} className="button">
           + Create material
         </Link>
       </div>
@@ -57,7 +59,7 @@ export default function Materials() {
                 <td>{new Date(m.created_at).toLocaleDateString()}</td>
                 <td>
                   <div className="row-actions">
-                    <Link to={`/app/materials/${m.id}/edit`} className="btn-secondary btn-sm">
+                    <Link to={`${base}/materials/${m.id}/edit`} className="btn-secondary btn-sm">
                       Edit
                     </Link>
                     <button type="button" className="btn-danger btn-sm" onClick={() => remove(m)}>

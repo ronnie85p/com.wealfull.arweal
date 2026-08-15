@@ -1,22 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { api, setToken } from '../api'
+import { setToken } from '../api'
 import { useAuth } from './AuthContext'
 import CompanyHeader from './CompanyHeader'
+import { useAccountContext } from './AccountContext'
+import { useAccountBase } from '../lib/account'
 
-const menu = [
-  { to: '/app', label: 'Dashboard', end: true },
-  { to: '/app/orders', label: 'Orders', end: false },
-  { to: '/app/services', label: 'Services', end: false },
-  { to: '/app/materials', label: 'Materials', end: false },
-  { to: '/app/projects', label: 'Projects', end: false },
-  { to: '/app/employers', label: 'Employers', end: false },
-  { to: '/app/customers', label: 'Customers', end: false },
-  { to: '/app/invoices', label: 'Invoices', end: false },
-  { to: '/app/payments', label: 'Payments', end: false },
-]
+function menu(base: string) {
+  return [
+    { to: `${base}`, label: 'Dashboard', end: true },
+    { to: `${base}/orders`, label: 'Orders', end: false },
+    { to: `${base}/services`, label: 'Services', end: false },
+    { to: `${base}/materials`, label: 'Materials', end: false },
+    { to: `${base}/projects`, label: 'Projects', end: false },
+    { to: `${base}/employers`, label: 'Employers', end: false },
+    { to: `${base}/customers`, label: 'Customers', end: false },
+    { to: `${base}/invoices`, label: 'Invoices', end: false },
+    { to: `${base}/payments`, label: 'Payments', end: false },
+  ]
+}
 
-const apiItem = { to: '/app/api', label: 'Api Keys', end: false }
+const apiItem = (base: string) => ({ to: `${base}/api`, label: 'Api', end: false })
 
 function initials(name: string): string {
   return name
@@ -30,25 +34,17 @@ function initials(name: string): string {
 export default function Layout() {
   const navigate = useNavigate()
   const { user: ctxUser } = useAuth()
+  const { account, accountLoading } = useAccountContext()
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
-  const [user, setUser] = useState(ctxUser)
+  const user = account?.user ?? ctxUser
 
   const userName = user?.username ?? 'Account'
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || userName
-
-  useEffect(() => {
-    setUser(ctxUser)
-  }, [ctxUser])
-
-  useEffect(() => {
-    api
-      .me()
-      .then(setUser)
-      .catch(() => {
-        /* keep context data */
-      })
-  }, [])
+  const accountTypeName = account?.account_type?.name ?? user?.account_type ?? ''
+  const base = useAccountBase()
+  const items = menu(base)
+  const apiLink = apiItem(base)
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -65,6 +61,14 @@ export default function Layout() {
     navigate('/login', { replace: true })
   }
 
+  if (accountLoading) {
+    return (
+      <div className="page-spinner">
+        <span className="btn-spinner" />
+      </div>
+    )
+  }
+
   return (
     <div className="layout">
       <header className="app-header">
@@ -79,7 +83,7 @@ export default function Layout() {
               <span className="profile-avatar">{initials(!user ? 'Account' : fullName)}</span>
               <span className="profile-name">
                 <span>{fullName}</span>
-                {user?.account_type && <small>{user.account_type}</small>}
+                {accountTypeName && <small>{accountTypeName}</small>}
               </span>
               <span className={`status-dot ${user?.online ? 'online' : 'offline'}`} />
               <span className="company-caret">▾</span>
@@ -88,7 +92,7 @@ export default function Layout() {
               <div className="profile-dropdown">
                 <div className="profile-head">
                   <strong>{fullName}</strong>
-                  {user?.account_type && <em className="profile-account-type">{user.account_type}</em>}
+                  {accountTypeName && <em className="profile-account-type">{accountTypeName}</em>}
                 </div>
                 <div className="dropdown-divider" />
                 <button
@@ -96,7 +100,7 @@ export default function Layout() {
                   className="profile-option profile-option--neutral"
                   onClick={() => {
                     setProfileOpen(false)
-                    window.location.href = '/app/settings'
+                    navigate(`${base}/settings`)
                   }}
                 >
                   Settings
@@ -112,7 +116,7 @@ export default function Layout() {
       <div className="layout-body">
         <aside className="sidebar">
           <nav className="nav">
-            {menu.map((item) => (
+            {items.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -124,11 +128,11 @@ export default function Layout() {
             ))}
             <div className="nav-divider" />
             <NavLink
-              to={apiItem.to}
-              end={apiItem.end}
+              to={apiLink.to}
+              end={apiLink.end}
               className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             >
-{apiItem.label}
+{apiLink.label}
           </NavLink>
         </nav>
       </aside>

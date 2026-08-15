@@ -3,11 +3,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import PasswordField from '../components/PasswordField'
+import { useAccountBase } from '../lib/account'
 
 const emptyForm = { username: '', password: '', first_name: '', last_name: '', email: '' }
 
 export default function EditCustomer() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const { id } = useParams()
   const customerId = Number(id)
 
@@ -51,7 +53,7 @@ export default function EditCustomer() {
         email: form.email.trim(),
         password: form.password || undefined,
       })
-      navigate(`/app/customers/${customerId}`)
+      navigate(`${base}/customers/${customerId}`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update customer')
       setSaving(false)
@@ -62,8 +64,8 @@ export default function EditCustomer() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Customers', to: '/app/customers' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Customers', to: `${base}/customers` },
         ]}
       />
       <h1>Edit customer</h1>
@@ -97,7 +99,7 @@ export default function EditCustomer() {
             <button type="submit" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </button>
-            <Link to={`/app/customers/${customerId}`} className="btn-secondary">
+            <Link to={`${base}/customers/${customerId}`} className="btn-secondary">
               Cancel
             </Link>
           </div>

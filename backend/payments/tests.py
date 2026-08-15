@@ -16,7 +16,7 @@ class AuthenticatedTestCase(TestCase):
         Profile.objects.create(user=self.user, email='payments@example.com')
         self.token = Token.objects.create(user=self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
-        cfg = self.client.get('/api/config/')
+        cfg = self.client.get('/api/config')
         self.csrf = cfg.json().get('csrf', '')
         self.client.cookies['csrftoken'] = self.csrf
 
@@ -27,7 +27,7 @@ class AuthenticatedTestCase(TestCase):
 class OrderTests(AuthenticatedTestCase):
     def test_create_order(self):
         res = self.post(
-            '/api/v1/orders/',
+            '/api/v1/orders',
             {'amount': '100.00', 'currency': 'EUR', 'status': 'pending', 'materials': 'included'},
         )
         self.assertEqual(res.status_code, 201)
@@ -37,41 +37,41 @@ class OrderTests(AuthenticatedTestCase):
         other = User.objects.create_user(username='otheruser', password='x')
         Order.objects.create(user=other, owner=other, amount=50, currency='EUR')
         Order.objects.create(user=self.user, owner=self.user, amount=100, currency='EUR')
-        res = self.client.get('/api/v1/orders/')
+        res = self.client.get('/api/v1/orders')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]['amount'], '100.00')
 
     def test_order_requires_authentication(self):
         anon = APIClient()
-        res = anon.get('/api/v1/orders/')
+        res = anon.get('/api/v1/orders')
         self.assertEqual(res.status_code, 401)
 
 
 class ServiceTests(AuthenticatedTestCase):
     def test_create_and_filter_service(self):
         self.post(
-            '/api/v1/services/',
+            '/api/v1/services',
             {'name': 'Cleaning', 'amount': '50.00', 'status': 'active'},
         )
-        res = self.client.get('/api/v1/services/?status=active')
+        res = self.client.get('/api/v1/services?status=active')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]['name'], 'Cleaning')
-        res_inactive = self.client.get('/api/v1/services/?status=inactive')
+        res_inactive = self.client.get('/api/v1/services?status=inactive')
         self.assertEqual(len(res_inactive.data), 0)
 
     def test_services_are_owned(self):
         other = User.objects.create_user(username='svcother', password='x')
         Service.objects.create(user=other, owner=other, name='Other', amount=10)
-        res = self.client.get('/api/v1/services/')
+        res = self.client.get('/api/v1/services')
         self.assertEqual(len(res.data), 0)
 
 
 class MaterialTests(AuthenticatedTestCase):
     def test_create_material(self):
         res = self.post(
-            '/api/v1/materials/',
+            '/api/v1/materials',
             {'name': 'Wood', 'unit': 'm', 'amount': '10.00'},
         )
         self.assertEqual(res.status_code, 201)
@@ -80,9 +80,9 @@ class MaterialTests(AuthenticatedTestCase):
 
 class ProjectTests(AuthenticatedTestCase):
     def test_create_and_search_project(self):
-        self.post('/api/v1/projects/', {'name': 'Kitchen remodel'})
-        self.post('/api/v1/projects/', {'name': 'Bathroom fix'})
-        res = self.client.get('/api/v1/projects/?search=kitchen')
+        self.post('/api/v1/projects', {'name': 'Kitchen remodel'})
+        self.post('/api/v1/projects', {'name': 'Bathroom fix'})
+        res = self.client.get('/api/v1/projects?search=kitchen')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]['name'], 'Kitchen remodel')
@@ -90,13 +90,13 @@ class ProjectTests(AuthenticatedTestCase):
     def test_projects_are_owned(self):
         other = User.objects.create_user(username='projother', password='x')
         Project.objects.create(user=other, owner=other, name='Secret')
-        res = self.client.get('/api/v1/projects/')
+        res = self.client.get('/api/v1/projects')
         self.assertEqual(len(res.data), 0)
 
 
 class InvoicesTests(AuthenticatedTestCase):
     def test_invoices_readonly(self):
-        res = self.post('/api/v1/invoices/', {'amount': '10.00'})
+        res = self.post('/api/v1/invoices', {'amount': '10.00'})
         self.assertEqual(res.status_code, 405)
-        res_list = self.client.get('/api/v1/invoices/')
+        res_list = self.client.get('/api/v1/invoices')
         self.assertEqual(res_list.status_code, 200)

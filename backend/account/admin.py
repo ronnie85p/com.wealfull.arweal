@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AccountType, Address, ApiKey
+from integrator.models import AccountType, Address, ApiKey
 
 
 @admin.register(AccountType)
@@ -10,7 +10,7 @@ class AccountTypeAdmin(admin.ModelAdmin):
 
 @admin.register(ApiKey)
 class ApiKeyAdmin(admin.ModelAdmin):
-    list_display = ['name', 'company', 'created_at', 'updated_at']
+    list_display = ['name', 'account', 'created_at', 'updated_at']
     readonly_fields = ['key']
 
 

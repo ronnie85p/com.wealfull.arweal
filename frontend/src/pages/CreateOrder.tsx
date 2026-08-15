@@ -4,6 +4,7 @@ import { api, Address, PlaceSuggestion, User } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ExecutorPicker from '../components/ExecutorPicker'
 import UserPicker from '../components/UserPicker'
+import { useAccountBase } from '../lib/account'
 
 const emptyAddressForm = {
   country: '',
@@ -86,6 +87,7 @@ function unmaskAmount(masked: string) {
 
 export default function CreateOrder() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const [user, setUser] = useState<User | null>(null)
   const [projName, setProjName] = useState('')
   const [projStart, setProjStart] = useState('')
@@ -303,7 +305,7 @@ export default function CreateOrder() {
             }
           : null,
       })
-      navigate('/app/orders')
+      navigate(`${base}/orders`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create order')
       setSaving(false)
@@ -367,8 +369,8 @@ export default function CreateOrder() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Orders', to: '/app/orders' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Orders', to: `${base}/orders` },
         ]}
       />
       <h1>New order</h1>
@@ -864,7 +866,7 @@ export default function CreateOrder() {
           <button type="submit" disabled={saving}>
             {saving ? 'Saving…' : 'Create order'}
           </button>
-          <Link to="/app/orders" className="btn-secondary">
+          <Link to={`${base}/orders`} className="btn-secondary">
             Cancel
           </Link>
         </div>

@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, User } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 const emptyForm = {
   country: '',
@@ -18,6 +19,7 @@ export default function CustomerCreateAddress() {
   const { id } = useParams()
   const customerId = Number(id)
   const navigate = useNavigate()
+  const base = useAccountBase()
   const [user, setUser] = useState<User | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
@@ -51,7 +53,7 @@ export default function CustomerCreateAddress() {
         zip: form.zip.trim(),
         is_default: form.is_default,
       })
-      navigate(`/app/customers/${customerId}/addresses`)
+      navigate(`${base}/customers/${customerId}/addresses`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create address')
       setSaving(false)
@@ -62,10 +64,10 @@ export default function CustomerCreateAddress() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Customers', to: '/app/customers' },
-          { label: user ? `${user.first_name || user.username} ${user.last_name}`.trim() : '…', to: `/app/customers/${customerId}` },
-          { label: 'Addresses', to: `/app/customers/${customerId}/addresses` },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Customers', to: `${base}/customers` },
+          { label: user ? `${user.first_name || user.username} ${user.last_name}`.trim() : '…', to: `${base}/customers/${customerId}` },
+          { label: 'Addresses', to: `${base}/customers/${customerId}/addresses` },
           { label: 'New address' },
         ]}
       />
@@ -112,7 +114,7 @@ export default function CustomerCreateAddress() {
           <button type="submit" disabled={saving}>
             {saving ? 'Creating…' : 'Create address'}
           </button>
-          <Link to={`/app/customers/${customerId}/addresses`} className="btn-secondary">
+          <Link to={`${base}/customers/${customerId}/addresses`} className="btn-secondary">
             Cancel
           </Link>
         </div>

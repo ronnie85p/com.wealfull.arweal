@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import SpinnerButton from '../components/SpinnerButton'
+import { useAccountBase } from '../lib/account'
 
 export default function CreateCompany() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const [name, setName] = useState('')
   const [ein, setEin] = useState('')
   const [description, setDescription] = useState('')
@@ -40,7 +42,7 @@ export default function CreateCompany() {
           : null,
       })
       localStorage.setItem('wf_company_id', String(created.id))
-      navigate('/app', { replace: true })
+      navigate(`${base}`, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create company')
       setLoading(false)
@@ -51,7 +53,7 @@ export default function CreateCompany() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
+          { label: 'Dashboard', to: `${base}` },
         ]}
       />
       <h1>New company</h1>
@@ -133,7 +135,7 @@ export default function CreateCompany() {
           <SpinnerButton type="submit" className="btn primary" loading={loading}>
             {loading ? 'Creating…' : 'Create company'}
           </SpinnerButton>
-          <Link to="/app" className="btn ghost">
+          <Link to={`${base}`} className="btn ghost">
             Cancel
           </Link>
         </div>

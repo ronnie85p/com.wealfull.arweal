@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import { useAccountBase } from '../lib/account'
 
 function initials(name: string): string {
   return name
@@ -19,6 +20,7 @@ export interface HeaderCompany {
 
 export default function CompanyHeader() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const [companies, setCompanies] = useState<HeaderCompany[]>([])
   const [companyId, setCompanyId] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -103,7 +105,7 @@ export default function CompanyHeader() {
             className="company-option add"
             onClick={() => {
               setMenuOpen(false)
-              navigate('/app/companies/new')
+              navigate(`${base}/companies/new`)
             }}
           >
             + Add company

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, Order } from '../api'
+import { useAccountBase } from '../lib/account'
 
 const currency = (o: Order) =>
   Number(o.amount).toLocaleString('en-US', { style: 'currency', currency: o.currency })
@@ -17,6 +18,7 @@ const projectsLine = (o: Order) => (o.project ? `#${o.project}` : '—')
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([])
+  const base = useAccountBase()
   const [filter, setFilter] = useState('')
   const [error, setError] = useState('')
 
@@ -36,7 +38,7 @@ export default function Orders() {
           <h1>Orders</h1>
           <p className="page-subtitle no-margin">All orders created by your integration.</p>
         </div>
-        <Link to="/app/orders/new" className="button">
+        <Link to={`${base}/orders/new`} className="button">
           + Create order
         </Link>
       </div>
@@ -83,7 +85,7 @@ export default function Orders() {
                 </td>
                 <td>{new Date(o.created_at).toLocaleString()}</td>
                 <td>
-                  <Link to={`/app/orders/${o.id}/edit`} className="btn-secondary btn-sm">
+                  <Link to={`${base}/orders/${o.id}/edit`} className="btn-secondary btn-sm">
                     Edit
                   </Link>
                 </td>

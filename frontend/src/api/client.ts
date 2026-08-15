@@ -4,11 +4,11 @@ const API_PREFIX = '/a'
 const API_VERSION = 'v1'
 
 function apiUrl(path: string): string {
-  return `${API_PREFIX}/api/${API_VERSION}${path}`
+  return `${API_PREFIX}/api/${API_VERSION}${path.replace(/\/+(?=\?|$)/, '')}`
 }
 
 function configUrl(): string {
-  return `${API_PREFIX}/api/config/`
+  return `${API_PREFIX}/api/config`
 }
 
 export function getToken(): string | null {
@@ -95,6 +95,14 @@ export interface AccountType {
   id: number
   name: string
   description: string
+}
+
+export interface Account {
+  id: number
+  uuid: string
+  account_type: AccountType
+  user: User
+  created_at: string
 }
 
 export interface OrderAddress {
@@ -198,9 +206,19 @@ export interface Payment {
 
 export interface ApiKey {
   id: number
-  company: number | null
+  account: string | null
   name: string
   key: string
+  domain: string
+  description: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ApiDomain {
+  id: number
+  account: string | null
+  domain: string
   description: string
   created_at: string
   updated_at: string
@@ -348,6 +366,8 @@ export const api = {
     }),
   me: () => request<User>('/auth/me/'),
   authStatus: () => request<{ authenticated: boolean; user: User | null }>('/auth/status/'),
+  account: (uuid?: string) =>
+    request<Account>(uuid ? `/account/${encodeURIComponent(uuid)}` : '/account'),
   accountTypes: () => request<AccountType[]>('/account-types/'),
   searchUsers: (term: string) =>
     request<User[]>(`/users/?search=${encodeURIComponent(term)}`),
@@ -398,7 +418,8 @@ export const api = {
     request<Project>(`/projects/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
   invoices: () => request<Invoice[]>('/invoices/'),
   payments: () => request<Payment[]>('/payments/'),
-  apiKeys: () => request<ApiKey[]>('/api-keys/'),
+  apiKeys: (account_id: string | null = null) =>
+    request<ApiKey[]>('/api-keys', { method: 'POST', body: JSON.stringify({ account_id }) }),
   companies: () => request<Company[]>('/companies/'),
   createCompany: (payload: {
     name: string
@@ -412,7 +433,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  createApiKey: (name: string, description = '') =>
-    request<ApiKey>('/api-keys/', { method: 'POST', body: JSON.stringify({ name, description }) }),
-  deleteApiKey: (id: number) => request<void>(`/api-keys/${id}/`, { method: 'DELETE' }),
+  createApiKey: (name: string, description = '', domain = '', account_id: string | null = null) =>
+    request<ApiKey>('/api-keys/create', {
+      method: 'POST',
+      body: JSON.stringify({ name, description, domain, account_id }),
+    }),
+  deleteApiKey: (id: number) => request<void>(`/api-keys/${id}`, { method: 'DELETE' }),
+  apiDomains: (account_id: string | null = null) =>
+    request<ApiDomain[]>('/api-domains', { method: 'POST', body: JSON.stringify({ account_id }) }),
+  createApiDomain: (domain: string, description = '', account_id: string | null = null) =>
+    request<ApiDomain>('/api-domains/create', {
+      method: 'POST',
+      body: JSON.stringify({ domain, description, account_id }),
+    }),
+  deleteApiDomain: (id: number) => request<void>(`/api-domains/${id}`, { method: 'DELETE' }),
 }

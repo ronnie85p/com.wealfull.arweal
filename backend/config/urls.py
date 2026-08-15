@@ -17,12 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from integrator.views import ConfigView
+from account.views import ConfigView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/config/', ConfigView.as_view(), name='config'),
-    path('api/v1/', include('integrator.urls')),
+    path('api/config', ConfigView.as_view(), name='config'),
+    path('api/v1/', include('account.urls')),
     path('api/v1/', include('payments.urls')),
 ]
 

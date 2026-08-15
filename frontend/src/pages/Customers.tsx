@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, User } from '../api'
+import { useAccountBase } from '../lib/account'
 
 export default function Customers() {
   const [items, setItems] = useState<User[]>([])
+  const base = useAccountBase()
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -27,7 +29,7 @@ export default function Customers() {
           <h1>Customers</h1>
           <p className="page-subtitle no-margin">All customers of your integration.</p>
         </div>
-        <Link to="/app/customers/new" className="button">
+        <Link to={`${base}/customers/new`} className="button">
           + Create customer
         </Link>
       </div>
@@ -61,10 +63,10 @@ export default function Customers() {
                 <td>{u.username}</td>
                 <td>{u.email || '—'}</td>
                 <td className="actions-cell">
-                  <Link to={`/app/customers/${u.id}`} className="btn-secondary btn-sm">
+                  <Link to={`${base}/customers/${u.id}`} className="btn-secondary btn-sm">
                     View
                   </Link>
-                  <Link to={`/app/customers/${u.id}/edit`} className="btn-secondary btn-sm">
+                  <Link to={`${base}/customers/${u.id}/edit`} className="btn-secondary btn-sm">
                     Edit
                   </Link>
                 </td>

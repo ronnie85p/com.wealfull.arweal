@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, Order, User } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 const currency = (o: Order) =>
   Number(o.amount).toLocaleString('en-US', { style: 'currency', currency: o.currency })
@@ -9,6 +10,7 @@ const currency = (o: Order) =>
 export default function CustomerDetail() {
   const { id } = useParams()
   const customerId = Number(id)
+  const base = useAccountBase()
 
   const [user, setUser] = useState<User | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
@@ -33,8 +35,8 @@ export default function CustomerDetail() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Customers', to: '/app/customers' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Customers', to: `${base}/customers` },
           { label: user ? `${user.first_name || user.username} ${user.last_name}`.trim() : '…' },
         ]}
       />
@@ -48,7 +50,7 @@ export default function CustomerDetail() {
             <p className="page-subtitle no-margin">
               @{user.username} · {user.email || 'no email'}
             </p>
-            <Link to={`/app/customers/${user.id}/edit`} className="user-edit-link">
+            <Link to={`${base}/customers/${user.id}/edit`} className="user-edit-link">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
               </svg>
@@ -56,10 +58,10 @@ export default function CustomerDetail() {
             </Link>
           </div>
           <div className="actions-cell">
-            <Link to={`/app/customers/${user.id}/addresses`} className="btn-secondary">
+            <Link to={`${base}/customers/${user.id}/addresses`} className="btn-secondary">
               Addresses
             </Link>
-            <Link to="/app/orders/new" className="button">
+            <Link to={`${base}/orders/new`} className="button">
               + Create order
             </Link>
           </div>

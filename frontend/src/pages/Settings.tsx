@@ -3,9 +3,11 @@ import { api } from '../api'
 import { useAuth } from '../components/AuthContext'
 import Breadcrumbs from '../components/Breadcrumbs'
 import PasswordField from '../components/PasswordField'
+import { useAccountBase } from '../lib/account'
 
 export default function Settings() {
   const { user } = useAuth()
+  const base = useAccountBase()
   const [form, setForm] = useState({
     username: '',
     first_name: '',
@@ -57,7 +59,7 @@ export default function Settings() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: 'Dashboard', to: '/app' }]} />
+      <Breadcrumbs items={[{ label: 'Dashboard', to: `${base}` }]} />
       <h1>Settings</h1>
       <p className="page-subtitle">Update your account details.</p>
 

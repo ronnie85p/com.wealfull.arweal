@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, Project } from '../api'
+import { useAccountBase } from '../lib/account'
 
 const startLine = (p: Project) =>
   p.start_time ? new Date(p.start_time).toLocaleString() : '—'
 
 export default function Projects() {
   const [items, setItems] = useState<Project[]>([])
+  const base = useAccountBase()
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function Projects() {
           <h1>Projects</h1>
           <p className="page-subtitle no-margin">Your projects.</p>
         </div>
-        <Link to="/app/projects/new" className="button">
+        <Link to={`${base}/projects/new`} className="button">
           + Create project
         </Link>
       </div>
@@ -52,7 +54,7 @@ export default function Projects() {
                 <td>{p.duration}–{p.duration_to} {p.duration_unit}</td>
               <td>{new Date(p.created_at).toLocaleDateString()}</td>
               <td>
-                <Link to={`/app/projects/${p.id}/edit`} className="btn-secondary btn-sm">
+                <Link to={`${base}/projects/${p.id}/edit`} className="btn-secondary btn-sm">
                   Edit
                 </Link>
               </td>

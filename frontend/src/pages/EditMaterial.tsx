@@ -2,9 +2,11 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 export default function EditMaterial() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const { id } = useParams()
   const materialId = Number(id)
 
@@ -34,7 +36,7 @@ export default function EditMaterial() {
     setSaving(true)
     try {
       await api.updateMaterial(materialId, { name: name.trim() })
-      navigate('/app/materials')
+      navigate(`${base}/materials`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update material')
       setSaving(false)
@@ -45,8 +47,8 @@ export default function EditMaterial() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Materials', to: '/app/materials' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Materials', to: `${base}/materials` },
         ]}
       />
       <h1>Edit material</h1>
@@ -69,7 +71,7 @@ export default function EditMaterial() {
             <button type="submit" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </button>
-            <Link to="/app/materials" className="btn-secondary">
+            <Link to={`${base}/materials`} className="btn-secondary">
               Cancel
             </Link>
           </div>

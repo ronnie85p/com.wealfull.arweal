@@ -189,7 +189,6 @@ export default function PageSkeleton() {
   if (pathname === '/login' || pathname === '/password') return <LoginSkeleton />
   if (AUTH_PATHS.has(pathname)) return <AuthSkeleton />
   if (EDIT_RE.test(pathname)) return <FormSkeleton />
-  if (pathname.startsWith('/app/')) return <TableSkeleton />
-  if (pathname === '/app') return <GenericSkeleton />
+  if (pathname.startsWith('/account/')) return <TableSkeleton />
   return <GenericSkeleton />
 }

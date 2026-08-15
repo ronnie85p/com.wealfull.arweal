@@ -3,9 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, setToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import SpinnerButton from '../components/SpinnerButton'
+import { useAccountBase } from '../lib/account'
 
 export default function Password() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const { username } = (useLocation().state as { username?: string } | null) ?? {}
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -22,7 +24,7 @@ export default function Password() {
     try {
       const data = await api.loginPassword(username!, password)
       setToken(data.token)
-      navigate('/app', { replace: true })
+      navigate(`${base}`, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {

@@ -49,11 +49,12 @@ class Company(models.Model):
 
 
 class ApiKey(models.Model):
-    company = models.ForeignKey(
-        'Company', on_delete=models.CASCADE, related_name='api_keys'
+    account = models.ForeignKey(
+        'Account', on_delete=models.SET_NULL, null=True, blank=True, related_name='api_keys'
     )
     name = models.CharField(max_length=100)
     key = models.CharField(max_length=64, unique=True, editable=False)
+    domain = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -66,6 +67,22 @@ class ApiKey(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.company.name})'
+
+
+class ApiDomain(models.Model):
+    account = models.ForeignKey(
+        'Account', on_delete=models.CASCADE, related_name='api_domains'
+    )
+    domain = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['domain']
+
+    def __str__(self):
+        return f'{self.domain} ({self.account.uuid})'
 
 
 class Address(models.Model):
@@ -101,6 +118,7 @@ class AccountType(models.Model):
 
 
 class Account(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     account_type = models.ForeignKey(
         AccountType, on_delete=models.PROTECT, related_name='accounts'
     )

@@ -4,9 +4,11 @@ import { api, setToken } from '../api'
 import PasswordInput, { passwordStrength } from '../components/PasswordInput'
 import PasswordField from '../components/PasswordField'
 import SpinnerButton from '../components/SpinnerButton'
+import { useAccountBase } from '../lib/account'
 
 export default function Security() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const { email: stateEmail } = (useLocation().state as { email?: string } | null) ?? {}
   const [email] = useState(() => stateEmail || localStorage.getItem('wf_registration_email') || '')
   const [password, setPassword] = useState('')
@@ -45,7 +47,7 @@ export default function Security() {
     try {
       const data = await api.completeRegistration({ email: email!, username, password, two_factor: twoFactor })
       setToken(data.token)
-      navigate('/app', { replace: true })
+      navigate(`${base}`, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save security settings')
     } finally {

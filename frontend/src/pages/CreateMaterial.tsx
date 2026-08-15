@@ -2,9 +2,11 @@ import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 export default function CreateMaterial() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const [name, setName] = useState('')
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -19,7 +21,7 @@ export default function CreateMaterial() {
     setSaving(true)
     try {
       await api.createMaterial({ name: name.trim() })
-      navigate('/app/materials')
+      navigate(`${base}/materials`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create material')
       setSaving(false)
@@ -30,8 +32,8 @@ export default function CreateMaterial() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Materials', to: '/app/materials' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Materials', to: `${base}/materials` },
         ]}
       />
       <h1>New material</h1>
@@ -52,7 +54,7 @@ export default function CreateMaterial() {
           <button type="submit" disabled={saving}>
             {saving ? 'Saving…' : 'Create material'}
           </button>
-          <Link to="/app/materials" className="btn-secondary">
+          <Link to={`${base}/materials`} className="btn-secondary">
             Cancel
           </Link>
         </div>

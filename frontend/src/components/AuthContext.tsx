@@ -1,5 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react'
-import { api } from '../api'
+import { createContext, ReactNode, useContext } from 'react'
 import { User } from '../api/client'
 
 interface AuthState {
@@ -22,30 +21,9 @@ const AuthContext = createContext<AuthState>({
 })
 
 export function AuthProvider({ children, initial }: AuthProviderProps) {
-  const [auth, setAuth] = useState<{ user: User | null; authenticated: boolean }>({
-    user: initial?.user ?? null,
-    authenticated: initial?.authenticated ?? false,
-  })
-  const [error, setError] = useState(false)
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined
-    interval = setInterval(() => {
-      api
-        .authStatus()
-        .then((s) => setAuth({ user: s.user, authenticated: s.authenticated }))
-        .catch(() => {
-          setError(true)
-          if (interval) clearInterval(interval)
-        })
-    }, 5000)
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [])
-
+  const auth = { user: initial?.user ?? null, authenticated: initial?.authenticated ?? false }
   return (
-    <AuthContext.Provider value={{ ...auth, loading: false, error }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ ...auth, loading: false, error: false }}>{children}</AuthContext.Provider>
   )
 }
 

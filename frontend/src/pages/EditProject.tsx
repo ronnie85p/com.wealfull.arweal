@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 const DURATION_UNITS = [
   { value: 'days', label: 'Days' },
@@ -19,6 +20,7 @@ const emptyForm = {
 
 export default function EditProject() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const { id } = useParams()
   const projectId = Number(id)
 
@@ -66,7 +68,7 @@ export default function EditProject() {
         duration_to: Number(form.duration_to) || 0,
         duration_unit: form.duration_unit,
       })
-      navigate('/app/projects')
+      navigate(`${base}/projects`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update project')
       setSaving(false)
@@ -77,8 +79,8 @@ export default function EditProject() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Projects', to: '/app/projects' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Projects', to: `${base}/projects` },
         ]}
       />
       <h1>Edit project</h1>
@@ -139,7 +141,7 @@ export default function EditProject() {
             <button type="submit" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </button>
-            <Link to="/app/projects" className="btn-secondary">
+            <Link to={`${base}/projects`} className="btn-secondary">
               Cancel
             </Link>
           </div>

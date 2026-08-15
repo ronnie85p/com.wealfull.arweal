@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, Service } from '../api'
+import { useAccountBase } from '../lib/account'
 
 const money = (s: Service) =>
   Number(s.amount).toLocaleString('en-US', { style: 'currency', currency: s.currency })
 
 export default function Services() {
   const [items, setItems] = useState<Service[]>([])
+  const base = useAccountBase()
   const [filter, setFilter] = useState('')
   const [error, setError] = useState('')
 
@@ -36,7 +38,7 @@ export default function Services() {
           <h1>Services</h1>
           <p className="page-subtitle no-margin">Your service catalog.</p>
         </div>
-        <Link to="/app/services/new" className="button">
+        <Link to={`${base}/services/new`} className="button">
           + Create service
         </Link>
       </div>
@@ -82,7 +84,7 @@ export default function Services() {
                 <td>{new Date(s.created_at).toLocaleDateString()}</td>
                 <td>
                   <div className="row-actions">
-                    <Link to={`/app/services/${s.id}/edit`} className="btn-secondary btn-sm">
+                    <Link to={`${base}/services/${s.id}/edit`} className="btn-secondary btn-sm">
                       Edit
                     </Link>
                     <button type="button" className="btn-danger btn-sm" onClick={() => remove(s)}>

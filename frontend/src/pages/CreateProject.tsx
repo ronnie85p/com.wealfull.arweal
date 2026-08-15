@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 const DURATION_UNITS = [
   { value: 'days', label: 'Days' },
@@ -19,6 +20,7 @@ const emptyForm = {
 
 export default function CreateProject() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -43,7 +45,7 @@ export default function CreateProject() {
         duration_to: Number(form.duration_to) || 0,
         duration_unit: form.duration_unit,
       })
-      navigate('/app/projects')
+      navigate(`${base}/projects`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create project')
       setSaving(false)
@@ -54,8 +56,8 @@ export default function CreateProject() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Projects', to: '/app/projects' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Projects', to: `${base}/projects` },
         ]}
       />
       <h1>New project</h1>
@@ -114,7 +116,7 @@ export default function CreateProject() {
           <button type="submit" disabled={saving}>
             {saving ? 'Saving…' : 'Create project'}
           </button>
-          <Link to="/app/projects" className="btn-secondary">
+          <Link to={`${base}/projects`} className="btn-secondary">
             Cancel
           </Link>
         </div>

@@ -58,11 +58,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'account',
     'integrator',
     'payments',
 ]
 
 MIDDLEWARE = [
+    'config.middleware.ApiOriginAuthMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -70,12 +72,14 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'config.middleware.CsrfHeaderMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'config.middleware.AccountAuthMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'config.authentication.ApiKeyAuthentication',
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
@@ -85,9 +89,12 @@ REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
     'DEFAULT_VERSION': 'v1',
     'ALLOWED_VERSIONS': ['v1'],
+    'EXCEPTION_HANDLER': 'config.exceptions.exception_handler',
 }
 
 ROOT_URLCONF = 'config.urls'
+
+APPEND_SLASH = False
 
 TEMPLATES = [
     {

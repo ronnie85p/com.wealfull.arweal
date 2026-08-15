@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, setToken } from '../api'
 import SpinnerButton from '../components/SpinnerButton'
+import { useAccountBase } from '../lib/account'
 
 const CODE_LENGTH = 6
 const CODE_TTL_MS = 900_000
@@ -36,6 +37,7 @@ function saveResendAt(ms: number) {
 
 export default function Confirm() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const { email: stateEmail, code: stateCode, mode = 'register' } = state()
   const backTo = mode === 'login' ? '/login' : '/register'
   const [email] = useState(stateEmail ?? localStorage.getItem('wf_registration_email') ?? '')
@@ -179,7 +181,7 @@ export default function Confirm() {
         const data = await api.loginConfirm(email, codeToSend)
         clearExpiry()
         setToken(data.token)
-        navigate('/app', { replace: true })
+        navigate(`${base}`, { replace: true })
         return
       }
       await api.confirm({ code: codeToSend, email, password: '' })

@@ -11,12 +11,13 @@ from django.db import ProgrammingError, transaction
 from django.db.models import Q
 from django.middleware.csrf import get_token
 from django.utils import timezone
-from rest_framework import generics, permissions, serializers, viewsets
+from rest_framework import generics, permissions, serializers, status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Account, AccountType, Address, ApiKey, Company, Profile
+from config.middleware import _client_ip, _source_host
+from integrator.models import Account, AccountType, Address, ApiDomain, ApiKey, Company, Profile
 from .services import (
     LOGIN_TTL,
     REGISTER_TTL,
@@ -37,9 +38,11 @@ def account_type_name(user) -> str:
         return ''
     return account.account_type.name if account else ''
 from .serializers import (
+    AccountSerializer,
     AccountTypeSerializer,
     AddressSerializer,
     ApiKeySerializer,
+    ApiDomainSerializer,
     CompanySerializer,
     UserCreateSerializer,
     UserSerializer,
@@ -101,7 +104,7 @@ class LoginView(APIView):
     def post(self, request):
         user = _find_user(request.data.get('username'))
         if not user or not user.is_active:
-            return Response({'detail': 'User not found'}, status=400)
+            return Response({'detail': 'User not found', 'ip': _client_ip(request), 'domain': _source_host(request)}, status=400)
         token, _ = Token.objects.get_or_create(user=user)
         return Response({
             'token': token.key,
@@ -112,6 +115,8 @@ class LoginView(APIView):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
             },
+            'ip': _client_ip(request),
+            'domain': _source_host(request),
         })
 
 
@@ -139,7 +144,7 @@ class LoginPasswordView(APIView):
         password = request.data.get('password') or ''
         authenticated = user and authenticate(request, username=user.username, password=password)
         if not authenticated:
-            return Response({'detail': 'Invalid credentials'}, status=400)
+            return Response({'detail': 'Invalid credentials', 'ip': _client_ip(request), 'domain': _source_host(request)}, status=400)
         token, _ = Token.objects.get_or_create(user=user)
         return Response({
             'token': token.key,
@@ -150,6 +155,8 @@ class LoginPasswordView(APIView):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
             },
+            'ip': _client_ip(request),
+            'domain': _source_host(request),
         })
 
 
@@ -171,7 +178,7 @@ class LoginSendCodeView(APIView):
         if wait:
             return Response({'detail': f'Try again in {wait} seconds'}, status=429)
         code, expires_at = issue_code(profile)
-        return Response({'code': code, 'expires_at': expires_at.isoformat(), 'email': email})
+        return Response({'code': code, 'expires_at': expires_at.isoformat(), 'email': email, 'ip': _client_ip(request), 'domain': _source_host(request)})
 
 
 class LoginCheckCodeView(APIView):
@@ -206,6 +213,8 @@ class LoginConfirmView(APIView):
                 'first_name': user.first_name,
                 'last_name': user.last_name,
             },
+            'ip': _client_ip(request),
+            'domain': _source_host(request),
         })
 
 
@@ -382,11 +391,30 @@ class MeView(APIView):
         })
 
 
+class AccountDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, uuid=None):
+        if uuid:
+            account = Account.objects.filter(uuid=uuid).select_related(
+                'account_type', 'user'
+            ).first()
+            if account is None:
+                return Response({'detail': 'Account not found'}, status=404)
+        else:
+            account = Account.objects.filter(user=request.user).select_related(
+                'account_type', 'user'
+            ).first()
+            if account is None:
+                return Response({'detail': 'No account for this user'}, status=404)
+        serializer = AccountSerializer(account)
+        return Response(serializer.data)
+
+
 class AuthStatusView(APIView):
     permission_classes = [permissions.AllowAny]
 
     ONLINE_WINDOW_SECONDS = 30
-
     def get(self, request):
         if not request.user.is_authenticated:
             return Response({'authenticated': False, 'user': None})
@@ -522,21 +550,76 @@ class CompanyListView(generics.ListCreateAPIView):
             company.save(update_fields=['address'])
 
 
+class ApiKeyCreateView(generics.CreateAPIView):
+    serializer_class = ApiKeySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        account = serializer.validated_data.get('account') or Account.objects.filter(
+            user=self.request.user
+        ).order_by('id').first()
+        if account is None:
+            raise serializers.ValidationError({'account_id': 'No account for this user.'})
+        if account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        serializer.save(account=account)
+
+
+class ApiDomainCreateView(generics.CreateAPIView):
+    serializer_class = ApiDomainSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        account = serializer.validated_data.get('account') or Account.objects.filter(
+            user=self.request.user
+        ).order_by('id').first()
+        if account is None:
+            raise serializers.ValidationError({'account_id': 'No account for this user.'})
+        if account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        serializer.save(account=account)
+
+
 class ApiKeyViewSet(viewsets.ModelViewSet):
     serializer_class = ApiKeySerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        companies = Company.objects.filter(owner=self.request.user)
-        return ApiKey.objects.filter(company__in=companies)
+        return ApiKey.objects.filter(account__user=self.request.user)
 
-    def perform_create(self, serializer):
-        company = serializer.validated_data.get('company') or Company.objects.filter(
-            owner=self.request.user
-        ).first()
-        if company is None:
-            raise serializers.ValidationError({'company': 'No company for this user.'})
-        serializer.save(company=company)
+    def create(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        account_id = request.data.get('account_id')
+        if account_id:
+            qs = qs.filter(account__uuid=account_id)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+
+class ApiDomainViewSet(viewsets.ModelViewSet):
+    serializer_class = ApiDomainSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ApiDomain.objects.filter(account__user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        account_id = request.data.get('account_id')
+        if account_id:
+            qs = qs.filter(account__uuid=account_id)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        linked = ApiKey.objects.filter(account=instance.account, domain=instance.domain).count()
+        if linked:
+            return Response(
+                {'detail': f'Cannot delete domain: {linked} API key(s) are linked to it.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
 
 
 def _has_api_key(req: urllib.request.Request) -> bool:

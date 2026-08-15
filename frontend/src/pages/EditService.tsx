@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountBase } from '../lib/account'
 
 const emptyForm = {
   name: '',
@@ -13,6 +14,7 @@ const emptyForm = {
 
 export default function EditService() {
   const navigate = useNavigate()
+  const base = useAccountBase()
   const { id } = useParams()
   const serviceId = Number(id)
 
@@ -65,7 +67,7 @@ export default function EditService() {
         currency: form.currency,
         status: form.status,
       })
-      navigate('/app/services')
+      navigate(`${base}/services`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update service')
       setSaving(false)
@@ -76,8 +78,8 @@ export default function EditService() {
     <>
       <Breadcrumbs
         items={[
-          { label: 'Dashboard', to: '/app' },
-          { label: 'Services', to: '/app/services' },
+          { label: 'Dashboard', to: `${base}` },
+          { label: 'Services', to: `${base}/services` },
         ]}
       />
       <h1>Edit service</h1>
@@ -136,7 +138,7 @@ export default function EditService() {
             <button type="submit" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </button>
-            <Link to="/app/services" className="btn-secondary">
+            <Link to={`${base}/services`} className="btn-secondary">
               Cancel
             </Link>
           </div>
