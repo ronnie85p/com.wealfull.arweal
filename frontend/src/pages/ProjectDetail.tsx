@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, Project } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const DURATION_UNITS = [
@@ -40,6 +41,7 @@ export default function ProjectDetail() {
   const { id } = useParams()
   const projectId = Number(id)
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const navigate = useNavigate()
 
   const [item, setItem] = useState<Project | null>(null)
@@ -96,6 +98,7 @@ export default function ProjectDetail() {
     setBusy(true)
     try {
       const payload = {
+        account_id: account?.uuid ?? null,
         name: form.name.trim(),
         description: form.description.trim(),
         start_time: form.startTime || null,

@@ -132,6 +132,7 @@ export interface OrderItem {
 export interface Order {
   id: number
   user: number
+  account_id: string | null
   external_id: string
   amount: string
   currency: string
@@ -163,6 +164,7 @@ export interface Invoice {
 
 export interface Service {
   id: number
+  account_id: string | null
   name: string
   short_description: string
   description: string
@@ -242,6 +244,7 @@ export interface Material {
 
 export interface Project {
   id: number
+  account_id: string | null
   name: string
   description: string
   start_time: string | null
@@ -331,6 +334,7 @@ export interface PlaceDetails {
 
 export interface Company {
   id: number
+  account_id: string | null
   name: string
   description: string
   ein: string
@@ -595,8 +599,22 @@ export const api = {  login: (username: string) =>
   searchUsers: (term: string) =>
     request<User[]>(`/users/?search=${encodeURIComponent(term)}`),
   recentUsers: () => request<User[]>('/users/recent/'),
+  inviteEmployer: (payload: { email: string; first_name?: string; last_name?: string; account_id?: string | null }) =>
+    request<User>('/users/invite', { method: 'POST', body: JSON.stringify(payload) }),
   createUser: (payload: { username: string; password: string; first_name?: string; last_name?: string; email?: string }) =>
     request<User>('/users/', { method: 'POST', body: JSON.stringify(payload) }),
+  customers: (search: string, account_id: string | null = null) =>
+    request<User[]>(
+      `/customers/?search=${encodeURIComponent(search)}` +
+        (account_id ? `&account_id=${encodeURIComponent(account_id)}` : ''),
+    ),
+  createCustomer: (payload: { username: string; password: string; first_name?: string; last_name?: string; email?: string }, account_id: string | null = null) =>
+    request<User>('/customers/', {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, account_id }),
+    }),
+  unbindCustomer: (id: number) =>
+    request<void>(`/customers/${id}`, { method: 'DELETE' }),
   user: (id: number) => request<User>(`/users/${id}/`),
   updateUser: (id: number, payload: Partial<User> & { password?: string }) =>
     request<User>(`/users/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
@@ -628,16 +646,16 @@ export const api = {  login: (username: string) =>
   categories: (search?: string) =>
     request<Category[]>(`/categories/${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   category: (id: number) => request<Category>(`/categories/${id}/`),
-  createCategory: (name: string, fullName = '', description = '', tags = '') =>
+  createCategory: (name: string, fullName = '', description = '', tags = '', account_id: string | null = null) =>
     request<Category>('/categories/', {
       method: 'POST',
-      body: JSON.stringify({ name, full_name: fullName, description, tags }),
+      body: JSON.stringify({ name, full_name: fullName, description, tags, account_id }),
     }),
   deleteCategory: (id: number) => request<void>(`/categories/${id}/`, { method: 'DELETE' }),
-  updateCategory: (id: number, name: string, fullName = '', description = '', tags = '') =>
+  updateCategory: (id: number, name: string, fullName = '', description = '', tags = '', account_id: string | null = null) =>
     request<Category>(`/categories/${id}/`, {
       method: 'PATCH',
-      body: JSON.stringify({ name, full_name: fullName, description, tags }),
+      body: JSON.stringify({ name, full_name: fullName, description, tags, account_id }),
     }),
   locations: (search?: string) =>
     request<Location[]>(`/locations/${search ? `?search=${encodeURIComponent(search)}` : ''}`),
@@ -682,6 +700,7 @@ export const api = {  login: (username: string) =>
     website?: string
     phone?: string
     address?: Partial<Address> | null
+    account_id?: string | null
   }) =>
     request<Company>('/companies/', {
       method: 'POST',

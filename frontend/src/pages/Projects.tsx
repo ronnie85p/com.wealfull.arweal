@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { api, Project } from '../api'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const DURATION_UNITS = [
@@ -47,6 +48,7 @@ const durationText = (p: Project) => {
 export default function Projects() {
   const location = useLocation()
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const [items, setItems] = useState<Project[]>([])
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -114,6 +116,7 @@ export default function Projects() {
     setBusy(true)
     try {
       const payload = {
+        account_id: account?.uuid ?? null,
         name: form.name.trim(),
         description: form.description.trim(),
         start_time: form.startTime || null,

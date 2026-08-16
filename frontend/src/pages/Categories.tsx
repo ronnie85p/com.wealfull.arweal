@@ -2,11 +2,13 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { api, Category } from '../api'
 import TagInput from '../components/TagInput'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 export default function Categories() {
   const location = useLocation()
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const [items, setItems] = useState<Category[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -52,8 +54,8 @@ export default function Categories() {
         description.trim(),
         tags.join(', '),
       ] as const
-      if (editingId) await api.updateCategory(editingId, ...payload)
-      else await api.createCategory(...payload)
+      if (editingId) await api.updateCategory(editingId, ...payload, account?.uuid ?? null)
+      else await api.createCategory(...payload, account?.uuid ?? null)
       setModalOpen(false)
       load()
     } catch (err) {

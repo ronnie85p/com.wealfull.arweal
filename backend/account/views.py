@@ -7,6 +7,7 @@ import urllib.request
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.db import ProgrammingError, transaction
 from django.db.models import Q
 from django.middleware.csrf import get_token
@@ -17,7 +18,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from config.middleware import _client_ip, _source_host
-from integrator.models import Account, AccountType, Address, ApiDomain, ApiKey, Company, Profile
+from integrator.models import (
+    Account,
+    AccountCustomer,
+    AccountType,
+    Address,
+    ApiDomain,
+    ApiKey,
+    Company,
+    Profile,
+)
 from .services import (
     LOGIN_TTL,
     REGISTER_TTL,
@@ -529,6 +539,112 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
 
 
+class CustomerListView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return UserCreateSerializer
+        return UserSerializer
+
+    def _account(self):
+        qs = Account.objects.filter(user=self.request.user)
+        account_id = self.request.query_params.get('account_id')
+        if account_id:
+            qs = qs.filter(uuid=account_id)
+        return qs.order_by('id').first()
+
+    def get_queryset(self):
+        account = self._account()
+        if account is None:
+            return User.objects.none()
+        qs = User.objects.filter(is_superuser=False, customer_of__account=account).distinct()
+        search = self.request.query_params.get('search', '')
+        if search:
+            qs = qs.filter(
+                Q(username__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(email__icontains=search)
+            )
+        return qs.order_by('username')[:50]
+
+    def perform_create(self, serializer):
+        account = self._account()
+        if account is None:
+            raise serializers.ValidationError({'account_id': 'No account for this user.'})
+        customer = serializer.save()
+        AccountCustomer.objects.get_or_create(account=account, customer=customer)
+
+
+class CustomerUnbindView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk):
+        account = Account.objects.filter(user=request.user).order_by('id').first()
+        if account is None:
+            return Response({'detail': 'No account for this user.'}, status=status.HTTP_404_NOT_FOUND)
+        AccountCustomer.objects.filter(account=account, customer_id=pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserInviteView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        email = (request.data.get('email') or '').strip().lower()
+        if not email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            raise serializers.ValidationError({'email': 'A valid email is required.'})
+        if User.objects.filter(username=email).exists():
+            return Response(
+                {'detail': 'A user with this email already exists.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        first_name = (request.data.get('first_name') or '').strip()
+        last_name = (request.data.get('last_name') or '').strip()
+        account = None
+        account_id = (request.data.get('account_id') or '').strip()
+        if account_id:
+            account = Account.objects.filter(uuid=account_id).first()
+            if account is None or account.user_id != request.user.id:
+                raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        else:
+            account = Account.objects.filter(user=request.user).order_by('id').first()
+        user = User.objects.create_user(
+            username=email, email=email, first_name=first_name, last_name=last_name
+        )
+        user.set_unusable_password()
+        user.save()
+        if account is not None:
+            AccountCustomer.objects.get_or_create(account=account, customer=user)
+        try:
+            send_mail(
+                'You have been invited to Wealfull CRM',
+                (
+                    f'Hello{(" " + first_name) if first_name else ""},\n\n'
+                    'You have been invited to Wealfull CRM as an executor.\n\n'
+                    f'Your username is: {email}\n'
+                    f'Sign in at: {settings.FRONTEND_URL}\n\n'
+                    'If you have any questions, reply to this email.'
+                ),
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+        return Response(
+            {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class CompanyListView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CompanySerializer
@@ -537,7 +653,12 @@ class CompanyListView(generics.ListCreateAPIView):
         return Company.objects.filter(owner=self.request.user).order_by('name')
 
     def perform_create(self, serializer):
-        company = serializer.save(owner=self.request.user)
+        account = serializer.validated_data.get('account') or Account.objects.filter(
+            user=self.request.user
+        ).order_by('id').first()
+        if account is not None and account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        company = serializer.save(owner=self.request.user, account=account)
         address_data = self.request.data.get('address')
         if isinstance(address_data, dict) and any(
             str(address_data.get(key, '') or '').strip() for key in ADDRESS_FIELDS

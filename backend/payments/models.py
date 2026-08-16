@@ -21,6 +21,10 @@ class Order(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_orders'
     )
+    account = models.ForeignKey(
+        'integrator.Account', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='orders',
+    )
     external_id = models.CharField(max_length=100, default='', blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, default='EUR')
@@ -113,6 +117,10 @@ class Service(models.Model):
     )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_services'
+    )
+    account = models.ForeignKey(
+        'integrator.Account', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='services',
     )
     name = models.CharField(max_length=200)
     short_description = models.CharField(max_length=200, blank=True)
@@ -277,6 +285,10 @@ class Project(models.Model):
     )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_projects'
+    )
+    account = models.ForeignKey(
+        'integrator.Account', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='projects',
     )
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)

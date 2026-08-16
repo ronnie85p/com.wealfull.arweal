@@ -99,6 +99,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
             qs = qs.filter(name__icontains=search)
         return qs.order_by('-created_at')
 
+    def perform_create(self, serializer):
+        account = serializer.validated_data.get('account') or Account.objects.filter(
+            user=self.request.user
+        ).order_by('id').first()
+        if account is not None and account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        serializer.save(account=account)
+
+    def perform_update(self, serializer):
+        account = serializer.validated_data.get('account')
+        if account is not None and account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        serializer.save()
+
     def perform_destroy(self, instance):
         instance.deleted_at = timezone.now()
         instance.save(update_fields=['deleted_at'])
@@ -127,9 +141,19 @@ class ServiceViewSet(viewsets.ModelViewSet):
         return qs.order_by('-created_at')
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, updated_by=self.request.user)
+        account = serializer.validated_data.get('account') or Account.objects.filter(
+            user=self.request.user
+        ).order_by('id').first()
+        if account is not None and account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        serializer.save(
+            account=account, created_by=self.request.user, updated_by=self.request.user
+        )
 
     def perform_update(self, serializer):
+        account = serializer.validated_data.get('account')
+        if account is not None and account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
         serializer.save(updated_by=self.request.user)
 
     def perform_destroy(self, instance):
@@ -187,6 +211,17 @@ class OrderViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
+        account = serializer.validated_data.get('account') or Account.objects.filter(
+            user=self.request.user
+        ).order_by('id').first()
+        if account is not None and account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        serializer.save(account=account)
+
+    def perform_update(self, serializer):
+        account = serializer.validated_data.get('account')
+        if account is not None and account.user_id != self.request.user.id:
+            raise serializers.ValidationError({'account_id': 'Invalid account.'})
         serializer.save()
 
 

@@ -8,6 +8,7 @@ import LocationFormModal from '../components/LocationFormModal'
 import MoneyInput from '../components/MoneyInput'
 import RichEditor from '../components/RichEditor'
 import TagInput from '../components/TagInput'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const money = (s: Service) =>
@@ -57,6 +58,7 @@ function parseMoney(raw: string): number | null {
 export default function Services() {
   const location = useLocation()
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const [items, setItems] = useState<Service[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [locations, setLocations] = useState<Location[]>([])
@@ -175,6 +177,7 @@ export default function Services() {
     setBusy(true)
     try {
       const payload = {
+        account_id: account?.uuid ?? null,
         name: form.name.trim(),
         short_description: form.shortDescription.trim(),
         description: form.description.trim(),

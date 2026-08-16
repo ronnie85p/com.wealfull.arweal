@@ -44,10 +44,14 @@ class ProjectSerializer(serializers.ModelSerializer):
     owner = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), required=False, default=serializers.CurrentUserDefault()
     )
+    account_id = serializers.SlugRelatedField(
+        slug_field='uuid', queryset=Account.objects.all(), source='account',
+        required=False, allow_null=True,
+    )
 
     class Meta:
         model = Project
-        fields = ['id', 'user', 'owner', 'name', 'description', 'start_time', 'duration', 'duration_to',
+        fields = ['id', 'user', 'owner', 'account_id', 'name', 'description', 'start_time', 'duration', 'duration_to',
                   'duration_unit', 'available_from', 'available_to', 'created_at']
         read_only_fields = ['id', 'created_at']
 
@@ -58,6 +62,10 @@ class OrderSerializer(serializers.ModelSerializer):
     )
     owner = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), required=False, default=serializers.CurrentUserDefault()
+    )
+    account_id = serializers.SlugRelatedField(
+        source='account', slug_field='uuid', queryset=Account.objects.all(),
+        required=False, allow_null=True,
     )
     address = OrderAddressSerializer(required=False, allow_null=True)
     project = serializers.PrimaryKeyRelatedField(
@@ -83,7 +91,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'user', 'owner', 'external_id', 'amount', 'currency', 'status', 'materials',
+        fields = ['id', 'user', 'owner', 'account_id', 'external_id', 'amount', 'currency', 'status', 'materials',
                   'materials_display', 'description', 'notes', 'comment', 'executors',
                   'executors_display', 'created_at', 'address', 'project', 'items']
         read_only_fields = ['id', 'created_at']
@@ -140,6 +148,10 @@ class ServiceSerializer(serializers.ModelSerializer):
     owner = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), required=False, default=serializers.CurrentUserDefault()
     )
+    account_id = serializers.SlugRelatedField(
+        slug_field='uuid', queryset=Account.objects.all(), source='account',
+        required=False, allow_null=True,
+    )
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
         source='category', queryset=Category.objects.all(), required=False, allow_null=True
@@ -152,7 +164,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Service
-        fields = ['id', 'user', 'owner', 'name', 'short_description', 'description', 'features', 'tags', 'price',
+        fields = ['id', 'user', 'owner', 'account_id', 'name', 'short_description', 'description', 'features', 'tags', 'price',
                   'old_price', 'duration_start', 'duration_end', 'duration_unit', 'currency', 'status', 'status_display',
                   'category_id', 'service_locations', 'location_links', 'images', 'created_at',
                   'created_by', 'updated_by', 'deleted_by']

@@ -4,6 +4,7 @@ import { api, Address, PlaceSuggestion, User } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import ExecutorPicker from '../components/ExecutorPicker'
 import UserPicker from '../components/UserPicker'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const emptyAddressForm = {
@@ -88,6 +89,7 @@ function unmaskAmount(masked: string) {
 export default function CreateOrder() {
   const navigate = useNavigate()
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const [user, setUser] = useState<User | null>(null)
   const [projName, setProjName] = useState('')
   const [projStart, setProjStart] = useState('')
@@ -263,6 +265,7 @@ export default function CreateOrder() {
     setSaving(true)
     try {
       const newProject = await api.createProject({
+        account_id: account?.uuid ?? null,
         name: projName.trim() || 'Project',
         description: projDetails,
         start_time: projStart || null,
@@ -273,6 +276,7 @@ export default function CreateOrder() {
         available_to: availTo || null,
       })
       await api.createOrder({
+        account_id: account?.uuid ?? null,
         amount: '0',
         materials,
         notes,

@@ -7,6 +7,7 @@ import LocationAutocomplete, { LocationPick } from '../components/LocationAutoco
 import MoneyInput from '../components/MoneyInput'
 import RichEditor from '../components/RichEditor'
 import TagInput from '../components/TagInput'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const money = (s: Service) =>
@@ -42,6 +43,7 @@ export default function ServiceDetail() {
   const { id } = useParams()
   const serviceId = Number(id)
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const navigate = useNavigate()
 
   const [item, setItem] = useState<Service | null>(null)
@@ -152,6 +154,7 @@ export default function ServiceDetail() {
     setBusy(true)
     try {
       const payload = {
+        account_id: account?.uuid ?? null,
         name: form.name.trim(),
         short_description: form.shortDescription.trim(),
         description: form.description.trim(),

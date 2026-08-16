@@ -27,6 +27,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('payments', '0017_user_groups'),
+        ('integrator', '0007_add_owner'),
     ]
 
     operations = [

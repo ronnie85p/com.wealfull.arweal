@@ -2,6 +2,7 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, Location, PlaceDetails, PlaceSuggestion } from '../api'
 import TagInput from '../components/TagInput'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 function detectType(types?: string[]): string {
@@ -18,6 +19,7 @@ function typeLabel(type: string): string {
 
 export default function Locations() {
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const [items, setItems] = useState<Location[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -188,6 +190,7 @@ export default function Locations() {
     setBusy(true)
     setError('')
     const payload = {
+      account_id: account?.uuid ?? null,
       location: name.trim(),
       description: description.trim(),
       tags: tags.join(', '),

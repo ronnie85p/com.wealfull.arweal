@@ -38,6 +38,7 @@ import EditMaterial from './pages/EditMaterial'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import Employers from './pages/Employers'
+import InviteEmployer from './pages/InviteEmployer'
 import CreateCompany from './pages/CreateCompany'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
@@ -134,6 +135,7 @@ export default function App() {
         <Route path="projects" element={<Projects />} />
         <Route path="projects/:id" element={<ProjectDetail />} />
         <Route path="employers" element={<Employers />} />
+        <Route path="employers/invite" element={<InviteEmployer />} />
         <Route path="companies/new" element={<CreateCompany />} />
         <Route path="settings" element={<Settings />} />
         <Route path="invoices" element={<Invoices />} />

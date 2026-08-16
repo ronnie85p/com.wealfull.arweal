@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import SpinnerButton from '../components/SpinnerButton'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 export default function CreateCompany() {
   const navigate = useNavigate()
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const [name, setName] = useState('')
   const [ein, setEin] = useState('')
   const [description, setDescription] = useState('')
@@ -32,6 +34,7 @@ export default function CreateCompany() {
     setLoading(true)
     try {
       const created = await api.createCompany({
+        account_id: account?.uuid ?? null,
         name: name.trim(),
         ein: ein.trim() || undefined,
         description: description.trim() || undefined,

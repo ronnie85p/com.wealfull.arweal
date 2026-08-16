@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import PasswordField from '../components/PasswordField'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const emptyForm = { username: '', password: '', first_name: '', last_name: '', email: '' }
@@ -10,6 +11,7 @@ const emptyForm = { username: '', password: '', first_name: '', last_name: '', e
 export default function CreateCustomer() {
   const navigate = useNavigate()
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -27,13 +29,16 @@ export default function CreateCustomer() {
     setError('')
     setSaving(true)
     try {
-      const user = await api.createUser({
-        username: form.username.trim(),
-        password: form.password,
-        first_name: form.first_name.trim(),
-        last_name: form.last_name.trim(),
-        email: form.email.trim(),
-      })
+      const user = await api.createCustomer(
+        {
+          username: form.username.trim(),
+          password: form.password,
+          first_name: form.first_name.trim(),
+          last_name: form.last_name.trim(),
+          email: form.email.trim(),
+        },
+        account?.uuid ?? null,
+      )
       navigate(`${base}/customers/${user.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create customer')

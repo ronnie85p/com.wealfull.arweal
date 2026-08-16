@@ -36,6 +36,9 @@ class Company(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_companies'
     )
+    account = models.ForeignKey(
+        'Account', on_delete=models.SET_NULL, null=True, blank=True, related_name='companies'
+    )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     ein = models.CharField(max_length=50, blank=True)
@@ -137,3 +140,24 @@ class Account(models.Model):
 
     def __str__(self):
         return f'{self.user.username} -> {self.account_type.name}'
+
+
+class AccountCustomer(models.Model):
+    account = models.ForeignKey(
+        Account, on_delete=models.CASCADE, related_name='customers'
+    )
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='customer_of'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['account', 'customer'], name='account_customer_unique'
+            ),
+        ]
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.account.uuid} -> {self.customer.username}'

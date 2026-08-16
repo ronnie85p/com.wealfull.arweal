@@ -27,6 +27,7 @@ urlpatterns = [
     path('account/<uuid:uuid>', views.AccountDetailView.as_view(), name='account-detail-uuid'),
     path('users', views.UserListView.as_view(), name='users'),
     path('users/recent', views.UserRecentView.as_view(), name='users-recent'),
+    path('users/invite', views.UserInviteView.as_view(), name='user-invite'),
     path('users/<int:pk>', views.UserDetailView.as_view(), name='user-detail'),
     path('users/<int:user_id>/orders', views.UserOrdersView.as_view(), name='user-orders'),
     path('users/<int:user_id>/addresses', views.AddressListCreateView.as_view(), name='user-addresses'),
@@ -36,5 +37,7 @@ urlpatterns = [
     path('places/details', views.PlacesDetailsView.as_view(), name='places-details'),
     path('api-keys/create', views.ApiKeyCreateView.as_view(), name='api-key-create'),
     path('api-domains/create', views.ApiDomainCreateView.as_view(), name='api-domain-create'),
+    path('customers', views.CustomerListView.as_view(), name='customers'),
+    path('customers/<int:pk>', views.CustomerUnbindView.as_view(), name='customer-unbind'),
     path('', include(router.urls)),
 ]

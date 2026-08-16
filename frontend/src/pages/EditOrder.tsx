@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const emptyForm = {
@@ -15,6 +16,7 @@ const emptyForm = {
 export default function EditOrder() {
   const navigate = useNavigate()
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const { id } = useParams()
   const orderId = Number(id)
 
@@ -56,7 +58,7 @@ export default function EditOrder() {
     setFormError('')
     setSaving(true)
     try {
-      await api.updateOrder(orderId, { ...form, amount: String(amount) })
+      await api.updateOrder(orderId, { ...form, amount: String(amount), account_id: account?.uuid ?? null })
       navigate(`${base}/orders`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update order')

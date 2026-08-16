@@ -97,7 +97,12 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 class CompanySerializer(serializers.ModelSerializer):
+    account_id = serializers.SlugRelatedField(
+        source='account', slug_field='uuid', queryset=Account.objects.all(),
+        required=False, allow_null=True,
+    )
+
     class Meta:
         model = Company
-        fields = ['id', 'name', 'description', 'ein', 'website', 'phone', 'created_at', 'updated_at']
+        fields = ['id', 'account_id', 'name', 'description', 'ein', 'website', 'phone', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
