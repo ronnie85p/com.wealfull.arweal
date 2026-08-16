@@ -673,7 +673,7 @@ export const api = {  login: (username: string) =>
   invoices: () => request<Invoice[]>('/invoices/'),
   payments: () => request<Payment[]>('/payments/'),
   apiKeys: (account_id: string | null = null) =>
-    request<ApiKey[]>('/api-keys', { method: 'POST', body: JSON.stringify({ account_id }) }),
+    request<ApiKey[]>('/api-keys' + (account_id ? `?account_id=${account_id}` : '')),
   companies: () => request<Company[]>('/companies/'),
   createCompany: (payload: {
     name: string
@@ -694,7 +694,7 @@ export const api = {  login: (username: string) =>
     }),
   deleteApiKey: (id: number) => request<void>(`/api-keys/${id}`, { method: 'DELETE' }),
   apiDomains: (account_id: string | null = null) =>
-    request<ApiDomain[]>('/api-domains', { method: 'POST', body: JSON.stringify({ account_id }) }),
+    request<ApiDomain[]>('/api-domains' + (account_id ? `?account_id=${account_id}` : '')),
   createApiDomain: (domain: string, description = '', account_id: string | null = null) =>
     request<ApiDomain>('/api-domains/create', {
       method: 'POST',

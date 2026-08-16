@@ -173,6 +173,14 @@ def _source_addr(request) -> str:
     return _source_host(request) or _client_ip(request)
 
 
+def _resolve_api_key(request):
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if not auth_header.startswith('Bearer '):
+        return None
+    token = auth_header[7:].strip()
+    return ApiKey.objects.filter(key=token).select_related('account__user').first()
+
+
 class ApiOriginAuthMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -184,24 +192,23 @@ class ApiOriginAuthMiddleware:
 
         source_host = _source_host(request)
         if not source_host:
-            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-            if auth_header.startswith('Bearer '):
-                token = auth_header[7:].strip()
-                api_key = ApiKey.objects.filter(key=token).select_related('account__user').first()
-                if api_key is not None and not _domain_allowed_for_key(api_key, '', _client_ip(request)):
-                    return JsonResponse(
-                        {
-                            'detail': 'Authentication credentials were not provided.',
-                            'source': _source_addr(request),
-                        },
-                        status=403,
-                    )
+            api_key = _resolve_api_key(request)
+            if api_key is not None and not _domain_allowed_for_key(api_key, '', _client_ip(request)):
+                return JsonResponse(
+                    {
+                        'detail': 'Authentication credentials were not provided.',
+                        'source': _source_addr(request),
+                    },
+                    status=403,
+                )
             return self.get_response(request)
         if source_host in _allowed_hosts():
             return self.get_response(request)
 
-        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if not auth_header.startswith('Bearer '):
+        api_key = _resolve_api_key(request)
+        if api_key is None:
+            if request.META.get('HTTP_AUTHORIZATION', '').startswith('Bearer '):
+                return JsonResponse({'detail': 'Invalid API key.'}, status=401)
             return JsonResponse(
                 {
                     'detail': 'Origin is not allowed and no API key provided.',
@@ -209,10 +216,6 @@ class ApiOriginAuthMiddleware:
                 },
                 status=401,
             )
-        token = auth_header[7:].strip()
-        api_key = ApiKey.objects.filter(key=token).select_related('account__user').first()
-        if api_key is None:
-            return JsonResponse({'detail': 'Invalid API key.'}, status=401)
         source_host = source_host or _hostname(request.META.get('HTTP_REFERER') or '')
         if not _domain_allowed_for_key(api_key, source_host, _client_ip(request)):
             return JsonResponse(

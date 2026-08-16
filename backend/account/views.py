@@ -588,15 +588,11 @@ class ApiKeyViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return ApiKey.objects.filter(account__user=self.request.user)
-
-    def create(self, request, *args, **kwargs):
-        qs = self.get_queryset()
-        account_id = request.data.get('account_id')
+        qs = ApiKey.objects.filter(account__user=self.request.user)
+        account_id = self.request.query_params.get('account_id')
         if account_id:
             qs = qs.filter(account__uuid=account_id)
-        serializer = self.get_serializer(qs, many=True)
-        return Response(serializer.data)
+        return qs
 
 
 class ApiDomainViewSet(viewsets.ModelViewSet):
@@ -604,15 +600,11 @@ class ApiDomainViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return ApiDomain.objects.filter(account__user=self.request.user)
-
-    def create(self, request, *args, **kwargs):
-        qs = self.get_queryset()
-        account_id = request.data.get('account_id')
+        qs = ApiDomain.objects.filter(account__user=self.request.user)
+        account_id = self.request.query_params.get('account_id')
         if account_id:
             qs = qs.filter(account__uuid=account_id)
-        serializer = self.get_serializer(qs, many=True)
-        return Response(serializer.data)
+        return qs
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

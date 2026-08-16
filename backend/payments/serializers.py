@@ -199,9 +199,12 @@ class ServiceSerializer(serializers.ModelSerializer):
             location_id = link.get('location_id')
             if not location_id:
                 continue
-            if not Location.objects.filter(id=location_id).exists():
+            location = Location.objects.filter(
+                id=location_id, account__user=self.context['request'].user
+            ).first()
+            if location is None:
                 raise serializers.ValidationError({'service_locations': 'Invalid location.'})
-            LocationServices.objects.create(service=service, location_id=location_id)
+            LocationServices.objects.create(service=service, location=location)
 
     def create(self, validated_data):
         links = validated_data.pop('service_locations', [])
@@ -210,9 +213,9 @@ class ServiceSerializer(serializers.ModelSerializer):
         return service
 
     def update(self, instance, validated_data):
-        links = validated_data.pop('service_locations', [])
+        links = validated_data.pop('service_locations', None)
         service = super().update(instance, validated_data)
-        if links:
+        if links is not None:
             self._set_links(service, links)
         return service
 
@@ -271,9 +274,12 @@ class LocationSerializer(serializers.ModelSerializer):
             service_id = link.get('service_id')
             if not service_id:
                 continue
-            if not Service.objects.filter(id=service_id).exists():
+            service = Service.objects.filter(
+                id=service_id, owner=self.context['request'].user
+            ).first()
+            if service is None:
                 raise serializers.ValidationError({'location_services': 'Invalid service.'})
-            LocationServices.objects.create(location=location, service_id=service_id)
+            LocationServices.objects.create(location=location, service=service)
 
     def create(self, validated_data):
         links = validated_data.pop('location_services', [])
@@ -282,9 +288,9 @@ class LocationSerializer(serializers.ModelSerializer):
         return location
 
     def update(self, instance, validated_data):
-        links = validated_data.pop('location_services', [])
+        links = validated_data.pop('location_services', None)
         location = super().update(instance, validated_data)
-        if links:
+        if links is not None:
             self._set_links(location, links)
         return location
 

@@ -4,26 +4,74 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
-def clear_domain_values(apps, schema_editor):
-    schema_editor.execute(
-        'ALTER TABLE integrator_apikey MODIFY COLUMN domain VARCHAR(255) NULL'
-    )
-    schema_editor.execute(
-        'UPDATE integrator_apikey SET domain = NULL'
-    )
+def convert_domain_to_fk(apps, schema_editor):
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        cursor.execute("SHOW COLUMNS FROM integrator_apikey LIKE 'domain'")
+        has_domain = cursor.fetchone() is not None
+        cursor.execute("SHOW COLUMNS FROM integrator_apikey LIKE 'domain_id'")
+        has_domain_id = cursor.fetchone() is not None
+        cursor.execute(
+            """
+            SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS
+            WHERE CONSTRAINT_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'integrator_apikey'
+              AND REFERENCED_TABLE_NAME = 'integrator_apidomain'
+            """
+        )
+        has_fk = cursor.fetchone()[0] > 0
+
+    if has_domain and not has_domain_id:
+        schema_editor.execute(
+            'ALTER TABLE integrator_apikey MODIFY COLUMN domain VARCHAR(255) NULL'
+        )
+        schema_editor.execute('UPDATE integrator_apikey SET domain = NULL')
+        schema_editor.execute(
+            'ALTER TABLE integrator_apikey CHANGE COLUMN domain domain_id BIGINT NULL'
+        )
+    elif has_domain and has_domain_id:
+        schema_editor.execute('ALTER TABLE integrator_apikey DROP COLUMN domain')
+    elif not has_domain and not has_domain_id:
+        schema_editor.execute(
+            'ALTER TABLE integrator_apikey ADD COLUMN domain_id BIGINT NULL'
+        )
+
+    if has_domain_id:
+        schema_editor.execute(
+            'ALTER TABLE integrator_apikey MODIFY COLUMN domain_id BIGINT NULL'
+        )
+
+    if not has_fk:
+        schema_editor.execute(
+            'ALTER TABLE integrator_apikey ADD CONSTRAINT integrator_apikey_domain_id_fk '
+            'FOREIGN KEY (domain_id) REFERENCES integrator_apidomain (id) '
+            'ON DELETE SET NULL'
+        )
 
 
 class Migration(migrations.Migration):
+
+    atomic = False
 
     dependencies = [
         ('integrator', '0029_apidomain'),
     ]
 
     operations = [
-        migrations.RunPython(clear_domain_values, migrations.RunPython.noop, atomic=False),
-        migrations.AlterField(
-            model_name='apikey',
-            name='domain',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='api_keys', to='integrator.apidomain'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunPython(
+                    convert_domain_to_fk,
+                    migrations.RunPython.noop,
+                    atomic=False,
+                ),
+            ],
+            state_operations=[
+                migrations.AlterField(
+                    model_name='apikey',
+                    name='domain',
+                    field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='api_keys', to='integrator.apidomain'),
+                ),
+            ],
         ),
     ]
