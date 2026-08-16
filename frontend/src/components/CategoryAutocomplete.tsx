@@ -1,5 +1,6 @@
 import { KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { api, Category } from '../api'
+import { useAccountContext } from './AccountContext'
 
 interface CategoryAutocompleteProps {
   onChange: (id: string) => void
@@ -20,6 +21,8 @@ export default function CategoryAutocomplete({
   focusSignal = 0,
   onFocusApplied,
 }: CategoryAutocompleteProps) {
+  const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const [list, setList] = useState<Category[]>(categories ?? [])
   const [results, setResults] = useState<Category[]>([])
   const [searched, setSearched] = useState(false)
@@ -54,7 +57,7 @@ export default function CategoryAutocomplete({
     searchTimer.current = setTimeout(() => {
       const seq = ++searchSeq.current
       api
-        .categories(q.trim())
+        .categories(q.trim(), accountId)
         .then((res) => {
           if (seq === searchSeq.current) {
             setResults(res)
@@ -78,7 +81,7 @@ export default function CategoryAutocomplete({
   function loadList() {
     setLoading(true)
     api
-      .categories()
+      .categories(undefined, accountId)
       .then(setList)
       .catch(() => undefined)
       .finally(() => setLoading(false))

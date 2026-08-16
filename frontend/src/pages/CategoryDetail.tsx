@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, Category, Service } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import TagInput from '../components/TagInput'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const money = (s: Service) =>
@@ -12,6 +13,8 @@ export default function CategoryDetail() {
   const { id } = useParams()
   const categoryId = Number(id)
   const base = useAccountBase()
+  const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const navigate = useNavigate()
 
   const [item, setItem] = useState<Category | null>(null)
@@ -33,17 +36,17 @@ export default function CategoryDetail() {
       return
     }
     api
-      .category(categoryId)
+      .category(categoryId, accountId)
       .then(setItem)
       .catch((e) => setError(e.message))
-  }, [categoryId])
+  }, [categoryId, accountId])
 
   useEffect(() => {
-    api.categories().then(setAllCategories).catch(() => undefined)
-  }, [])
+    api.categories(undefined, accountId).then(setAllCategories).catch(() => undefined)
+  }, [accountId])
   useEffect(() => {
-    api.services().then(setServices).catch(() => undefined)
-  }, [])
+    api.services(accountId).then(setServices).catch(() => undefined)
+  }, [accountId])
 
   const categoryServices = services.filter((s) => s.category_id === categoryId)
 
@@ -72,9 +75,9 @@ export default function CategoryDetail() {
     setBusy(true)
     setEditError('')
     try {
-      await api.updateCategory(categoryId, name.trim(), fullName.trim(), description.trim(), tags.join(', '))
+      await api.updateCategory(categoryId, name.trim(), fullName.trim(), description.trim(), tags.join(', '), accountId)
       setEditOpen(false)
-      const updated = await api.category(categoryId)
+      const updated = await api.category(categoryId, accountId)
       setItem(updated)
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save category')
@@ -88,7 +91,7 @@ export default function CategoryDetail() {
     setBusy(true)
     setError('')
     try {
-      await api.deleteCategory(item.id)
+      await api.deleteCategory(item.id, accountId)
       navigate(`${base}/categories`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete category')

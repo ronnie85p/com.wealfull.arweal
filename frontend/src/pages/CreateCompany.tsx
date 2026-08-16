@@ -34,7 +34,6 @@ export default function CreateCompany() {
     setLoading(true)
     try {
       const created = await api.createCompany({
-        account_id: account?.uuid ?? null,
         name: name.trim(),
         ein: ein.trim() || undefined,
         description: description.trim() || undefined,
@@ -43,7 +42,7 @@ export default function CreateCompany() {
         address: hasAddress
           ? { ...address, is_default: false }
           : null,
-      })
+      }, account?.uuid ?? '')
       localStorage.setItem('wf_company_id', String(created.id))
       navigate(`${base}`, { replace: true })
     } catch (err) {

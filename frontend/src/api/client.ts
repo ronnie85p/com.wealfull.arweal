@@ -30,6 +30,12 @@ export interface AppConfig {
 let config: AppConfig | null = null
 let configFailed = false
 
+let lastResponseHeaders: Headers | null = null
+
+function hasMoreHeader(): boolean {
+  return lastResponseHeaders?.get('X-Has-More') === 'true'
+}
+
 export function isConfigFailed(): boolean {
   return configFailed
 }
@@ -270,6 +276,17 @@ export interface Payment {
   created_at: string
 }
 
+export interface EventLog {
+  id: number
+  actor: string | null
+  entity: string
+  entity_id: number | null
+  entity_label: string
+  action: string
+  payload: Record<string, unknown>
+  created_at: string
+}
+
 export interface ApiKey {
   id: number
   account_id: string | null
@@ -277,8 +294,10 @@ export interface ApiKey {
   key: string
   domain_id: number | null
   description: string
+  permissions: string[]
   created_at: string
   updated_at: string
+  last_used_at: string | null
 }
 
 export interface ApiDomain {
@@ -288,6 +307,15 @@ export interface ApiDomain {
   description: string
   created_at: string
   updated_at: string
+}
+
+export interface EmailSettings {
+  host: string
+  port: number
+  username: string
+  password: string
+  use_tls: boolean
+  from_email: string
 }
 
 export interface Address {
@@ -356,6 +384,7 @@ async function request<T>(path: string, options: RequestInit = {}, redirectOn401
   if (config?.csrf) headers['X-CSRFToken'] = config.csrf
 
   const res = await fetch(apiUrl(path), { ...options, headers })
+  lastResponseHeaders = res.headers
 
   if (res.status === 401) {
     setToken(null)
@@ -603,18 +632,19 @@ export const api = {  login: (username: string) =>
     request<User>('/users/invite', { method: 'POST', body: JSON.stringify(payload) }),
   createUser: (payload: { username: string; password: string; first_name?: string; last_name?: string; email?: string }) =>
     request<User>('/users/', { method: 'POST', body: JSON.stringify(payload) }),
-  customers: (search: string, account_id: string | null = null) =>
+  customers: (search: string, account_id: string) =>
     request<User[]>(
-      `/customers/?search=${encodeURIComponent(search)}` +
-        (account_id ? `&account_id=${encodeURIComponent(account_id)}` : ''),
+      `/account/${encodeURIComponent(account_id)}/customers?search=${encodeURIComponent(search)}`,
     ),
-  createCustomer: (payload: { username: string; password: string; first_name?: string; last_name?: string; email?: string }, account_id: string | null = null) =>
-    request<User>('/customers/', {
+  customer: (id: number, account_id: string) =>
+    request<User>(`/account/${encodeURIComponent(account_id)}/customers/${id}`),
+  createCustomer: (payload: { username: string; password: string; first_name?: string; last_name?: string; email?: string }, account_id: string) =>
+    request<User>(`/account/${encodeURIComponent(account_id)}/customers`, {
       method: 'POST',
-      body: JSON.stringify({ ...payload, account_id }),
+      body: JSON.stringify(payload),
     }),
-  unbindCustomer: (id: number) =>
-    request<void>(`/customers/${id}`, { method: 'DELETE' }),
+  unbindCustomer: (id: number, account_id: string) =>
+    request<void>(`/account/${encodeURIComponent(account_id)}/customers/${id}`, { method: 'DELETE' }),
   user: (id: number) => request<User>(`/users/${id}/`),
   updateUser: (id: number, payload: Partial<User> & { password?: string }) =>
     request<User>(`/users/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
@@ -628,49 +658,58 @@ export const api = {  login: (username: string) =>
     request<void>(`/users/${userId}/addresses/${id}/`, { method: 'DELETE' }),
   placesAutocomplete: (q: string) => placesAutocomplete(q),
   placeDetails: (placeId: string) => placeDetails(placeId),
-  orders: () => request<Order[]>('/orders/'),
-  createOrder: (payload: OrderPayload) =>
-    request<Order>('/orders/', { method: 'POST', body: JSON.stringify(payload) }),
-  order: (id: number) => request<Order>(`/orders/${id}/`),
-  updateOrder: (id: number, payload: OrderPayload) =>
-    request<Order>(`/orders/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  services: () => request<Service[]>('/services/'),
-  createService: (payload: Partial<Service>) =>
-    request<Service>('/services/', { method: 'POST', body: JSON.stringify(payload) }),
-  service: (id: number) => request<Service>(`/services/${id}/`),
-  updateService: (id: number, payload: Partial<Service>) =>
-    request<Service>(`/services/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  deleteService: (id: number) => request<void>(`/services/${id}/`, { method: 'DELETE' }),
-  restoreService: (id: number) =>
-    request<Service>(`/services/${id}/restore`, { method: 'POST' }),
-  categories: (search?: string) =>
-    request<Category[]>(`/categories/${search ? `?search=${encodeURIComponent(search)}` : ''}`),
-  category: (id: number) => request<Category>(`/categories/${id}/`),
-  createCategory: (name: string, fullName = '', description = '', tags = '', account_id: string | null = null) =>
-    request<Category>('/categories/', {
+  orders: (account_id: string) =>
+    request<Order[]>(`/account/${encodeURIComponent(account_id)}/orders`),
+  createOrder: (payload: OrderPayload, account_id: string) =>
+    request<Order>(`/account/${encodeURIComponent(account_id)}/orders`, { method: 'POST', body: JSON.stringify(payload) }),
+  order: (id: number, account_id: string) =>
+    request<Order>(`/account/${encodeURIComponent(account_id)}/orders/${id}`),
+  updateOrder: (id: number, payload: OrderPayload, account_id: string) =>
+    request<Order>(`/account/${encodeURIComponent(account_id)}/orders/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  services: (account_id: string) =>
+    request<Service[]>(`/account/${encodeURIComponent(account_id)}/services`),
+  createService: (payload: Partial<Service>, account_id: string) =>
+    request<Service>(`/account/${encodeURIComponent(account_id)}/services`, { method: 'POST', body: JSON.stringify(payload) }),
+  service: (id: number, account_id: string) =>
+    request<Service>(`/account/${encodeURIComponent(account_id)}/services/${id}`),
+  updateService: (id: number, payload: Partial<Service>, account_id: string) =>
+    request<Service>(`/account/${encodeURIComponent(account_id)}/services/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteService: (id: number, account_id: string) =>
+    request<void>(`/account/${encodeURIComponent(account_id)}/services/${id}`, { method: 'DELETE' }),
+  restoreService: (id: number, account_id: string) =>
+    request<Service>(`/account/${encodeURIComponent(account_id)}/services/${id}/restore`, { method: 'POST' }),
+  categories: (search: string | undefined, account_id: string) =>
+    request<Category[]>(`/account/${encodeURIComponent(account_id)}/categories${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  category: (id: number, account_id: string) =>
+    request<Category>(`/account/${encodeURIComponent(account_id)}/categories/${id}`),
+  createCategory: (name: string, fullName = '', description = '', tags = '', account_id: string) =>
+    request<Category>(`/account/${encodeURIComponent(account_id)}/categories`, {
       method: 'POST',
-      body: JSON.stringify({ name, full_name: fullName, description, tags, account_id }),
+      body: JSON.stringify({ name, full_name: fullName, description, tags }),
     }),
-  deleteCategory: (id: number) => request<void>(`/categories/${id}/`, { method: 'DELETE' }),
-  updateCategory: (id: number, name: string, fullName = '', description = '', tags = '', account_id: string | null = null) =>
-    request<Category>(`/categories/${id}/`, {
+  deleteCategory: (id: number, account_id: string) =>
+    request<void>(`/account/${encodeURIComponent(account_id)}/categories/${id}`, { method: 'DELETE' }),
+  updateCategory: (id: number, name: string, fullName = '', description = '', tags = '', account_id: string) =>
+    request<Category>(`/account/${encodeURIComponent(account_id)}/categories/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ name, full_name: fullName, description, tags, account_id }),
+      body: JSON.stringify({ name, full_name: fullName, description, tags }),
     }),
-  locations: (search?: string) =>
-    request<Location[]>(`/locations/${search ? `?search=${encodeURIComponent(search)}` : ''}`),
-  location: (id: number) => request<Location>(`/locations/${id}/`),
-  createLocation: (payload: Partial<Location>) =>
-    request<Location>('/locations/', {
+  locations: (search: string | undefined, account_id: string) =>
+    request<Location[]>(`/account/${encodeURIComponent(account_id)}/locations${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  location: (id: number, account_id: string) =>
+    request<Location>(`/account/${encodeURIComponent(account_id)}/locations/${id}`),
+  createLocation: (payload: Partial<Location>, account_id: string) =>
+    request<Location>(`/account/${encodeURIComponent(account_id)}/locations`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  updateLocation: (id: number, payload: Partial<Location>) =>
-    request<Location>(`/locations/${id}/`, {
+  updateLocation: (id: number, payload: Partial<Location>, account_id: string) =>
+    request<Location>(`/account/${encodeURIComponent(account_id)}/locations/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
-  deleteLocation: (id: number) => request<void>(`/locations/${id}/`, { method: 'DELETE' }),
+  deleteLocation: (id: number, account_id: string) =>
+    request<void>(`/account/${encodeURIComponent(account_id)}/locations/${id}`, { method: 'DELETE' }),
   materials: () => request<Material[]>('/materials/'),
   createMaterial: (payload: Partial<Material>) =>
     request<Material>('/materials/', { method: 'POST', body: JSON.stringify(payload) }),
@@ -678,21 +717,63 @@ export const api = {  login: (username: string) =>
   updateMaterial: (id: number, payload: Partial<Material>) =>
     request<Material>(`/materials/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteMaterial: (id: number) => request<void>(`/materials/${id}/`, { method: 'DELETE' }),
-  projects: (search?: string) =>
-    request<Project[]>(`/projects/${search ? `?search=${encodeURIComponent(search)}` : ''}`),
-  createProject: (payload: Partial<Project>) =>
-    request<Project>('/projects/', { method: 'POST', body: JSON.stringify(payload) }),
-  project: (id: number) => request<Project>(`/projects/${id}/`),
-  updateProject: (id: number, payload: Partial<Project>) =>
-    request<Project>(`/projects/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
-  deleteProject: (id: number) => request<void>(`/projects/${id}/`, { method: 'DELETE' }),
-  restoreProject: (id: number) =>
-    request<Project>(`/projects/${id}/restore`, { method: 'POST' }),
+  projects: (search: string | undefined, account_id: string) =>
+    request<Project[]>(`/account/${encodeURIComponent(account_id)}/projects${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  createProject: (payload: Partial<Project>, account_id: string) =>
+    request<Project>(`/account/${encodeURIComponent(account_id)}/projects`, { method: 'POST', body: JSON.stringify(payload) }),
+  project: (id: number, account_id: string) =>
+    request<Project>(`/account/${encodeURIComponent(account_id)}/projects/${id}`),
+  updateProject: (id: number, payload: Partial<Project>, account_id: string) =>
+    request<Project>(`/account/${encodeURIComponent(account_id)}/projects/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteProject: (id: number, account_id: string) =>
+    request<void>(`/account/${encodeURIComponent(account_id)}/projects/${id}`, { method: 'DELETE' }),
+  restoreProject: (id: number, account_id: string) =>
+    request<Project>(`/account/${encodeURIComponent(account_id)}/projects/${id}/restore`, { method: 'POST' }),
   invoices: () => request<Invoice[]>('/invoices/'),
   payments: () => request<Payment[]>('/payments/'),
-  apiKeys: (account_id: string | null = null) =>
-    request<ApiKey[]>('/api-keys' + (account_id ? `?account_id=${account_id}` : '')),
-  companies: () => request<Company[]>('/companies/'),
+  events: (
+    account_id: string,
+    kind: 'general' | 'api' | 'authorize' | 'mail' = 'general',
+    before?: number,
+    after?: number,
+    dateFrom?: string,
+    dateTo?: string,
+    actorName?: string,
+  ) => {
+    const params = [
+      `kind=${kind}`,
+      before ? `before=${before}` : '',
+      after ? `after=${after}` : '',
+      dateFrom ? `date_from=${dateFrom}` : '',
+      dateTo ? `date_to=${dateTo}` : '',
+      actorName ? `actor=${encodeURIComponent(actorName)}` : '',
+    ]
+      .filter(Boolean)
+      .join('&')
+    return request<EventLog[]>(
+      `/account/${encodeURIComponent(account_id)}/events?${params}`,
+    ).then((items) => ({ items, hasMore: hasMoreHeader() }))
+  },
+  emailSettings: (account_id: string) =>
+    request<EmailSettings>(`/account/${encodeURIComponent(account_id)}/email-settings`),
+  updateEmailSettings: (account_id: string, payload: Partial<EmailSettings>) =>
+    request<EmailSettings>(`/account/${encodeURIComponent(account_id)}/email-settings`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  testEmailSettings: (account_id: string, recipient: string) =>
+    request<{ detail: string }>(
+      `/account/${encodeURIComponent(account_id)}/email-settings/test`,
+      { method: 'POST', body: JSON.stringify({ recipient }) },
+    ),
+  apiKeys: (account_id: string) =>
+    request<ApiKey[]>(`/account/${encodeURIComponent(account_id)}/api-keys`),
+  apiKey: (id: number, account_id: string) =>
+    request<ApiKey>(`/account/${encodeURIComponent(account_id)}/api-keys/${id}`),
+  companies: (account_id: string) =>
+    request<Company[]>(`/account/${encodeURIComponent(account_id)}/companies`),
+  company: (id: number, account_id: string) =>
+    request<Company>(`/account/${encodeURIComponent(account_id)}/companies/${id}`),
   createCompany: (payload: {
     name: string
     ein?: string
@@ -700,24 +781,37 @@ export const api = {  login: (username: string) =>
     website?: string
     phone?: string
     address?: Partial<Address> | null
-    account_id?: string | null
-  }) =>
-    request<Company>('/companies/', {
+  }, account_id: string) =>
+    request<Company>(`/account/${encodeURIComponent(account_id)}/companies`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  createApiKey: (name: string, description = '', domain_id: number | null = null, account_id: string | null = null) =>
-    request<ApiKey>('/api-keys/create', {
+  createApiKey: (name: string, description = '', domain_id: number | null = null, account_id: string) =>
+    request<ApiKey>(`/account/${encodeURIComponent(account_id)}/api-keys`, {
       method: 'POST',
-      body: JSON.stringify({ name, description, domain_id, account_id }),
+      body: JSON.stringify({ name, description, domain_id }),
     }),
-  deleteApiKey: (id: number) => request<void>(`/api-keys/${id}`, { method: 'DELETE' }),
-  apiDomains: (account_id: string | null = null) =>
-    request<ApiDomain[]>('/api-domains' + (account_id ? `?account_id=${account_id}` : '')),
-  createApiDomain: (domain: string, description = '', account_id: string | null = null) =>
-    request<ApiDomain>('/api-domains/create', {
+  updateApiKey: (id: number, payload: { name?: string; description?: string; domain_id?: number | null; permissions?: string[] }, account_id: string) =>
+    request<ApiKey>(`/account/${encodeURIComponent(account_id)}/api-keys/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteApiKey: (id: number, account_id: string) =>
+    request<void>(`/account/${encodeURIComponent(account_id)}/api-keys/${id}`, { method: 'DELETE' }),
+  apiDomains: (account_id: string) =>
+    request<ApiDomain[]>(`/account/${encodeURIComponent(account_id)}/api-domains`),
+  apiDomain: (id: number, account_id: string) =>
+    request<ApiDomain>(`/account/${encodeURIComponent(account_id)}/api-domains/${id}`),
+  createApiDomain: (domain: string, description = '', account_id: string) =>
+    request<ApiDomain>(`/account/${encodeURIComponent(account_id)}/api-domains`, {
       method: 'POST',
-      body: JSON.stringify({ domain, description, account_id }),
+      body: JSON.stringify({ domain, description }),
     }),
-  deleteApiDomain: (id: number) => request<void>(`/api-domains/${id}`, { method: 'DELETE' }),
+  updateApiDomain: (id: number, payload: { domain?: string; description?: string }, account_id: string) =>
+    request<ApiDomain>(`/account/${encodeURIComponent(account_id)}/api-domains/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteApiDomain: (id: number, account_id: string) =>
+    request<void>(`/account/${encodeURIComponent(account_id)}/api-domains/${id}`, { method: 'DELETE' }),
 }

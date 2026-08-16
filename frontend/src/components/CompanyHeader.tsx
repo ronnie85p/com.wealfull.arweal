@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAccountBase } from '../lib/account'
+import { useAccountContext } from './AccountContext'
 
 function initials(name: string): string {
   return name
@@ -89,6 +90,8 @@ export interface HeaderCompany {
 export default function CompanyHeader() {
   const navigate = useNavigate()
   const base = useAccountBase()
+  const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const [companies, setCompanies] = useState<HeaderCompany[]>([])
   const [companyId, setCompanyId] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -97,8 +100,9 @@ export default function CompanyHeader() {
   const assetsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (!accountId) return
     api
-      .companies()
+      .companies(accountId)
       .then((list) => {
         setCompanies(list)
         const saved = localStorage.getItem('wf_company_id')

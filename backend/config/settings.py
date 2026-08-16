@@ -37,6 +37,8 @@ EMAIL_PORT = int(os.environ.get('SMTP_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('SMTP_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
+EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '10'))
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@wealfull.com')
 
 pymysql.install_as_MySQLdb()
@@ -85,6 +87,7 @@ MIDDLEWARE = [
     'config.middleware.CsrfHeaderMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'config.middleware.AccountAuthMiddleware',
+    'config.middleware.ApiCallLogMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

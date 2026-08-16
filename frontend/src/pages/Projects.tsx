@@ -59,10 +59,11 @@ export default function Projects() {
   const [formError, setFormError] = useState('')
 
   function load() {
-    api.projects().then(setItems).catch((e) => setError(e.message))
+    if (!account?.uuid) return
+    api.projects(undefined, account.uuid).then(setItems).catch((e) => setError(e.message))
   }
 
-  useEffect(load, [])
+  useEffect(load, [account?.uuid])
 
   useEffect(() => {
     if ((location.state as { openNew?: boolean } | null)?.openNew) {
@@ -127,9 +128,9 @@ export default function Projects() {
         available_to: form.availableTo || null,
       }
       if (editingId) {
-        await api.updateProject(editingId, payload)
+        await api.updateProject(editingId, payload, account?.uuid ?? '')
       } else {
-        await api.createProject(payload)
+        await api.createProject(payload, account?.uuid ?? '')
       }
       setModalOpen(false)
       load()
@@ -142,7 +143,7 @@ export default function Projects() {
 
   async function remove(p: Project) {
     try {
-      await api.deleteProject(p.id)
+      await api.deleteProject(p.id, account?.uuid ?? '')
       setItems((prev) => prev.map((x) => (x.id === p.id ? { ...x, deleted: true } : x)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete project')
@@ -151,7 +152,7 @@ export default function Projects() {
 
   async function restore(p: Project) {
     try {
-      await api.restoreProject(p.id)
+      await api.restoreProject(p.id, account?.uuid ?? '')
       setItems((prev) => prev.map((x) => (x.id === p.id ? { ...x, deleted: false } : x)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to restore project')

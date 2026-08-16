@@ -1,5 +1,6 @@
 import { KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { api, Location } from '../api'
+import { useAccountContext } from './AccountContext'
 
 export interface LocationPick {
   id: number
@@ -23,6 +24,8 @@ export default function LocationAutocomplete({
   focusSignal = 0,
   onFocusApplied,
 }: LocationAutocompleteProps) {
+  const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const [list, setList] = useState<Location[]>(locations ?? [])
   const [results, setResults] = useState<Location[]>([])
   const [searched, setSearched] = useState(false)
@@ -54,7 +57,7 @@ export default function LocationAutocomplete({
     searchTimer.current = setTimeout(() => {
       const seq = ++searchSeq.current
       api
-        .locations(q.trim())
+        .locations(q.trim(), accountId)
         .then((res) => {
           if (seq === searchSeq.current) {
             setResults(res)
@@ -78,7 +81,7 @@ export default function LocationAutocomplete({
   function loadList() {
     setLoading(true)
     api
-      .locations()
+      .locations(undefined, accountId)
       .then(setList)
       .catch(() => undefined)
       .finally(() => setLoading(false))

@@ -174,6 +174,13 @@ export default function Layout() {
 {apiLink.label}
           </NavLink>
           <NavLink
+            to={`${base}/logs`}
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+          >
+            Logs
+          </NavLink>
+          <NavLink
             to="/docs"
             onClick={() => setSidebarOpen(false)}
             className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}

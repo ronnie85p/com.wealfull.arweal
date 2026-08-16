@@ -1,7 +1,17 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from integrator.models import Account, AccountType, Address, ApiDomain, ApiKey, Company
+from integrator.models import (
+    API_KEY_PERMISSIONS,
+    Account,
+    AccountType,
+    Address,
+    ApiDomain,
+    ApiKey,
+    Company,
+    EmailSettings,
+    EventLog,
+)
 
 
 class AccountTypeSerializer(serializers.ModelSerializer):
@@ -67,9 +77,17 @@ class ApiKeySerializer(serializers.ModelSerializer):
         source='domain', queryset=ApiDomain.objects.all(), required=False, allow_null=True
     )
 
+    def validate_permissions(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError('Permissions must be a list.')
+        unknown = [p for p in value if p not in API_KEY_PERMISSIONS]
+        if unknown:
+            raise serializers.ValidationError(f'Unknown permissions: {", ".join(unknown)}')
+        return list(dict.fromkeys(value))
+
     class Meta:
         model = ApiKey
-        fields = ['id', 'account_id', 'name', 'key', 'domain_id', 'description', 'created_at', 'updated_at', 'last_used_at']
+        fields = ['id', 'account_id', 'name', 'key', 'domain_id', 'description', 'permissions', 'created_at', 'updated_at', 'last_used_at']
         read_only_fields = ['created_at', 'updated_at', 'last_used_at', 'key']
 
 
@@ -94,6 +112,33 @@ class AddressSerializer(serializers.ModelSerializer):
         model = Address
         fields = ['id', 'owner', 'country', 'state', 'city', 'street', 'building', 'unit', 'zip', 'is_default', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class EventLogSerializer(serializers.ModelSerializer):
+    actor = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = EventLog
+        fields = [
+            'id',
+            'actor',
+            'entity',
+            'entity_id',
+            'entity_label',
+            'action',
+            'payload',
+            'created_at',
+        ]
+
+
+class EmailSettingsSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+
+    class Meta:
+        model = EmailSettings
+        fields = ['host', 'port', 'username', 'password', 'use_tls', 'from_email']
 
 
 class CompanySerializer(serializers.ModelSerializer):

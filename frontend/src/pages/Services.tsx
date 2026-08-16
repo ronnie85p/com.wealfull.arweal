@@ -77,16 +77,17 @@ export default function Services() {
   const [locationFocus, setLocationFocus] = useState(0)
 
   function load() {
-    api.services().then(setItems).catch((e) => setError(e.message))
+    if (!account?.uuid) return
+    api.services(account.uuid).then(setItems).catch((e) => setError(e.message))
   }
 
-  useEffect(load, [])
+  useEffect(load, [account?.uuid])
   useEffect(() => {
-    api.categories().then(setCategories).catch(() => undefined)
-  }, [])
+    if (account?.uuid) api.categories(undefined, account.uuid).then(setCategories).catch(() => undefined)
+  }, [account?.uuid])
   useEffect(() => {
-    api.locations().then(setLocations).catch(() => undefined)
-  }, [])
+    if (account?.uuid) api.locations(undefined, account.uuid).then(setLocations).catch(() => undefined)
+  }, [account?.uuid])
 
   useEffect(() => {
     if ((location.state as { openNew?: boolean } | null)?.openNew) {
@@ -194,18 +195,18 @@ export default function Services() {
         service_locations: form.locations.map((l) => ({ location_id: l.id })),
       }
       if (editingId) {
-        await api.updateService(editingId, payload)
+        await api.updateService(editingId, payload, account?.uuid ?? '')
       } else {
-        const created = await api.createService(payload)
+        const created = await api.createService(payload, account?.uuid ?? '')
         const linkLocationId = (location.state as { locationId?: number } | null)?.locationId
         if (linkLocationId) {
-          const loc = await api.location(linkLocationId)
+          const loc = await api.location(linkLocationId, account?.uuid ?? '')
           await api.updateLocation(linkLocationId, {
             location_services: [
               ...loc.service_links.map((l) => ({ service_id: l.service_id })),
               { service_id: created.id },
             ],
-          })
+          }, account?.uuid ?? '')
         }
       }
       setModalOpen(false)
@@ -219,7 +220,7 @@ export default function Services() {
 
   async function remove(s: Service) {
     try {
-      await api.deleteService(s.id)
+      await api.deleteService(s.id, account?.uuid ?? '')
       setItems((prev) => prev.map((x) => (x.id === s.id ? { ...x, deleted: true } : x)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete service')
@@ -228,7 +229,7 @@ export default function Services() {
 
   async function restore(s: Service) {
     try {
-      await api.restoreService(s.id)
+      await api.restoreService(s.id, account?.uuid ?? '')
       setItems((prev) => prev.map((x) => (x.id === s.id ? { ...x, deleted: false } : x)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to restore service')

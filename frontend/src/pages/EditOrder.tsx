@@ -30,8 +30,9 @@ export default function EditOrder() {
       setError('Order not found.')
       return
     }
+    if (!account?.uuid) return
     api
-      .order(orderId)
+      .order(orderId, account.uuid)
       .then((o) =>
         setForm({
           external_id: o.external_id,
@@ -42,7 +43,7 @@ export default function EditOrder() {
         }),
       )
       .catch((e) => setError(e.message))
-  }, [orderId])
+  }, [orderId, account?.uuid])
 
   function set<K extends keyof typeof emptyForm>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -58,7 +59,7 @@ export default function EditOrder() {
     setFormError('')
     setSaving(true)
     try {
-      await api.updateOrder(orderId, { ...form, amount: String(amount), account_id: account?.uuid ?? null })
+      await api.updateOrder(orderId, { ...form, amount: String(amount) }, account?.uuid ?? '')
       navigate(`${base}/orders`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update order')

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, Project } from '../api'
+import { useAccountContext } from './AccountContext'
 
 interface ProjectPickerProps {
   value: Project | null
@@ -7,6 +8,8 @@ interface ProjectPickerProps {
 }
 
 export default function ProjectPicker({ value, onChange }: ProjectPickerProps) {
+  const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Project[]>([])
   const [open, setOpen] = useState(false)
@@ -35,7 +38,7 @@ export default function ProjectPicker({ value, onChange }: ProjectPickerProps) {
     setLoading(true)
     const timer = setTimeout(() => {
       api
-        .projects(term)
+        .projects(term, accountId)
         .then((r) => {
           setResults(r)
         })

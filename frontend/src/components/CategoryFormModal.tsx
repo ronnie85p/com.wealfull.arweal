@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react'
 import { api, Category } from '../api'
 import TagInput from './TagInput'
+import { useAccountContext } from './AccountContext'
 
 interface CategoryFormModalProps {
   categories: Category[]
@@ -13,6 +14,8 @@ export default function CategoryFormModal({
   onClose,
   onCreated,
 }: CategoryFormModalProps) {
+  const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const [name, setName] = useState('')
   const [fullName, setFullName] = useState('')
   const [description, setDescription] = useState('')
@@ -34,6 +37,7 @@ export default function CategoryFormModal({
         fullName.trim(),
         description.trim(),
         tags.join(', '),
+        accountId,
       )
       onCreated(category)
     } catch (err) {

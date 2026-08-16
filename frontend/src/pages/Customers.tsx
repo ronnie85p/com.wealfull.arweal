@@ -23,7 +23,7 @@ export default function Customers() {
     setLoading(true)
     const timer = setTimeout(() => {
       api
-        .customers(query.trim(), account?.uuid ?? null)
+        .customers(query.trim(), account?.uuid ?? '')
         .then(setItems)
         .catch((e) => setError(e.message))
         .finally(() => setLoading(false))
@@ -52,7 +52,7 @@ export default function Customers() {
           last_name: form.last_name.trim(),
           email: form.email.trim(),
         },
-        account?.uuid ?? null,
+        account?.uuid ?? '',
       )
       setModalOpen(false)
       setForm(emptyForm)

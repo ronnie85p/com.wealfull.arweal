@@ -84,7 +84,7 @@ export default function Employers() {
           last_name: form.last_name.trim(),
           email: form.email.trim(),
         },
-        account?.uuid ?? null,
+        account?.uuid ?? '',
       )
       setModalOpen(false)
       setForm(emptyForm)

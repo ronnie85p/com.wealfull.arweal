@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiDomain, ApiKey } from '../api'
 import { useAccountContext } from '../components/AccountContext'
+import { useAccountBase } from '../lib/account'
 
 function maskKey(key: string) {
   if (key.length <= 8) return key
@@ -11,10 +12,13 @@ function maskKey(key: string) {
 export default function ApiPage() {
   const { account } = useAccountContext()
   const accountId = account?.uuid ?? null
+  const base = useAccountBase()
   const [keys, setKeys] = useState<ApiKey[]>([])
   const [domains, setDomains] = useState<ApiDomain[]>([])
   const [keyModalOpen, setKeyModalOpen] = useState(false)
   const [domainModalOpen, setDomainModalOpen] = useState(false)
+  const [editing, setEditing] = useState<ApiKey | null>(null)
+  const [editingDomain, setEditingDomain] = useState<ApiDomain | null>(null)
   const [name, setName] = useState('')
   const [domain, setDomain] = useState<string | number>('')
   const [domainName, setDomainName] = useState('')
@@ -27,6 +31,7 @@ export default function ApiPage() {
   const [copied, setCopied] = useState(false)
 
   function load() {
+    if (!accountId) return
     api.apiKeys(accountId).then(setKeys).catch((e) => setError(e.message))
     api.apiDomains(accountId).then(setDomains).catch((e) => setError(e.message))
   }
@@ -49,6 +54,7 @@ export default function ApiPage() {
   }
 
   function openKeyModal() {
+    setEditing(null)
     setName('')
     setDomain(domains[0]?.id ?? '')
     setDescription('')
@@ -56,40 +62,77 @@ export default function ApiPage() {
     setKeyModalOpen(true)
   }
 
+  function openEditKey(k: ApiKey) {
+    setEditing(k)
+    setName(k.name)
+    setDomain(k.domain_id ?? '')
+    setDescription(k.description)
+    setError('')
+    setKeyModalOpen(true)
+  }
+
   function openDomainModal() {
+    setEditingDomain(null)
     setDomainName('')
     setDomainDescription('')
     setError('')
     setDomainModalOpen(true)
   }
 
-  async function onCreateKey(e: FormEvent) {
+  function openEditDomain(d: ApiDomain) {
+    setEditingDomain(d)
+    setDomainName(d.domain)
+    setDomainDescription(d.description)
+    setError('')
+    setDomainModalOpen(true)
+  }
+
+  async function onSaveKey(e: FormEvent) {
     e.preventDefault()
     if (!name.trim() || busy) return
+    if (!accountId) {
+      setError('No account for this user.')
+      return
+    }
     setBusy(true)
     setError('')
     try {
-      await api.createApiKey(name.trim(), description.trim(), domain ? Number(domain) : null, accountId)
+      const payload = {
+        name: name.trim(),
+        description: description.trim(),
+        domain_id: domain ? Number(domain) : null,
+      }
+      if (editing) {
+        await api.updateApiKey(editing.id, payload, accountId)
+      } else {
+        await api.createApiKey(payload.name, payload.description, payload.domain_id, accountId)
+      }
       setKeyModalOpen(false)
       load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create key')
+      setError(err instanceof Error ? err.message : 'Failed to save key')
     } finally {
       setBusy(false)
     }
   }
 
-  async function onCreateDomain(e: FormEvent) {
+  async function onSaveDomain(e: FormEvent) {
     e.preventDefault()
     if (!domainName.trim() || busy) return
     setBusy(true)
     setError('')
     try {
-      await api.createApiDomain(domainName.trim(), domainDescription.trim(), accountId)
+      if (editingDomain) {
+        await api.updateApiDomain(editingDomain.id, {
+          description: domainDescription.trim(),
+        }, accountId ?? '')
+      } else {
+        await api.createApiDomain(domainName.trim(), domainDescription.trim(), accountId ?? '')
+      }
       setDomainModalOpen(false)
       load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add domain')
+      setError(err instanceof Error ? err.message : 'Failed to save domain')
     } finally {
       setBusy(false)
     }
@@ -97,13 +140,17 @@ export default function ApiPage() {
 
   async function remove() {
     if (!deleting || delBusy) return
+    if (!accountId) {
+      setError('No account for this user.')
+      return
+    }
     setDelBusy(true)
     setError('')
     try {
       if ('key' in deleting) {
-        await api.deleteApiKey(deleting.id)
+        await api.deleteApiKey(deleting.id, accountId)
       } else {
-        await api.deleteApiDomain(deleting.id)
+        await api.deleteApiDomain(deleting.id, accountId)
       }
       setDeleting(null)
       load()
@@ -159,7 +206,9 @@ export default function ApiPage() {
           <tbody>
             {keys.map((k) => (
               <tr key={k.id}>
-                <td>{k.name}</td>
+                <td>
+                  <Link to={`${base}/api/keys/${k.id}`}>{k.name}</Link>
+                </td>
                 <td>
                   <span className="key-cell">
                     <code className="clickable" onClick={() => copyKey(k.key)} title="Copy">{maskKey(k.key)}</code>
@@ -175,9 +224,14 @@ export default function ApiPage() {
                 <td>{k.description || '—'}</td>
                 <td>{new Date(k.created_at).toLocaleDateString()}</td>
                 <td>
-                  <button className="btn-danger" onClick={() => setDeleting(k)} title="Delete">
-                    Delete
-                  </button>
+                  <div className="row-actions">
+                    <button type="button" className="btn-sm" onClick={() => openEditKey(k)}>
+                      Edit
+                    </button>
+                    <button type="button" className="btn-danger btn-sm" onClick={() => setDeleting(k)}>
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -212,9 +266,14 @@ export default function ApiPage() {
                 <td>{d.description || '—'}</td>
                 <td>{new Date(d.created_at).toLocaleDateString()}</td>
                 <td>
-                  <button className="btn-danger" onClick={() => setDeleting(d)} title="Delete">
-                    Delete
-                  </button>
+                  <div className="row-actions">
+                    <button type="button" className="btn-sm" onClick={() => openEditDomain(d)}>
+                      Edit
+                    </button>
+                    <button type="button" className="btn-danger btn-sm" onClick={() => setDeleting(d)}>
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -232,8 +291,8 @@ export default function ApiPage() {
       {keyModalOpen && (
         <div className="modal-overlay" onClick={() => setKeyModalOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Create API key</h3>
-            <form className="modal-form" onSubmit={onCreateKey}>
+            <h3>{editing ? 'Edit API key' : 'Create API key'}</h3>
+            <form className="modal-form" onSubmit={onSaveKey}>
               <label className="field-label">
                 Domain
                 <select value={domain} onChange={(e) => setDomain(e.target.value)}>
@@ -267,7 +326,7 @@ export default function ApiPage() {
               {error && <div className="alert">{error}</div>}
               <div className="modal-actions">
                 <button type="submit" disabled={busy || !name.trim()}>
-                  {busy ? 'Creating…' : 'Create'}
+                  {busy ? 'Saving…' : editing ? 'Save' : 'Create'}
                 </button>
                 <button type="button" className="btn-secondary" onClick={() => setKeyModalOpen(false)}>
                   Cancel
@@ -280,18 +339,20 @@ export default function ApiPage() {
       {domainModalOpen && (
         <div className="modal-overlay" onClick={() => setDomainModalOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Add domain</h3>
-            <form className="modal-form" onSubmit={onCreateDomain}>
-              <label className="field-label">
-                Domain *
-                <input
-                  value={domainName}
-                  onChange={(e) => setDomainName(e.target.value)}
-                  placeholder="e.g. api.example.com"
-                  autoFocus
-                  required
-                />
-              </label>
+            <h3>{editingDomain ? 'Edit domain' : 'Add domain'}</h3>
+            <form className="modal-form" onSubmit={onSaveDomain}>
+              {!editingDomain && (
+                <label className="field-label">
+                  Domain *
+                  <input
+                    value={domainName}
+                    onChange={(e) => setDomainName(e.target.value)}
+                    placeholder="e.g. api.example.com"
+                    autoFocus
+                    required
+                  />
+                </label>
+              )}
               <label className="field-label">
                 Description
                 <textarea
@@ -299,12 +360,13 @@ export default function ApiPage() {
                   onChange={(e) => setDomainDescription(e.target.value)}
                   placeholder="What is this domain for?"
                   rows={3}
+                  autoFocus={!!editingDomain}
                 />
               </label>
               {error && <div className="alert">{error}</div>}
               <div className="modal-actions">
-                <button type="submit" disabled={busy || !domainName.trim()}>
-                  {busy ? 'Adding…' : 'Add'}
+                <button type="submit" disabled={busy || (!editingDomain && !domainName.trim())}>
+                  {busy ? 'Saving…' : editingDomain ? 'Save' : 'Add'}
                 </button>
                 <button
                   type="button"

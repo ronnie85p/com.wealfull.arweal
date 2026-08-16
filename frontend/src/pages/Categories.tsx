@@ -20,10 +20,11 @@ export default function Categories() {
   const [error, setError] = useState('')
 
   function load() {
-    api.categories().then(setItems).catch((e) => setError(e.message))
+    if (!account?.uuid) return
+    api.categories(undefined, account.uuid).then(setItems).catch((e) => setError(e.message))
   }
 
-  useEffect(load, [])
+  useEffect(load, [account?.uuid])
 
   useEffect(() => {
     if ((location.state as { openNew?: boolean } | null)?.openNew) {
@@ -54,8 +55,8 @@ export default function Categories() {
         description.trim(),
         tags.join(', '),
       ] as const
-      if (editingId) await api.updateCategory(editingId, ...payload, account?.uuid ?? null)
-      else await api.createCategory(...payload, account?.uuid ?? null)
+      if (editingId) await api.updateCategory(editingId, ...payload, account?.uuid ?? '')
+      else await api.createCategory(...payload, account?.uuid ?? '')
       setModalOpen(false)
       load()
     } catch (err) {
@@ -68,7 +69,7 @@ export default function Categories() {
   async function remove(c: Category) {
     if (!window.confirm(`Delete category "${c.name}"?`)) return
     try {
-      await api.deleteCategory(c.id)
+      await api.deleteCategory(c.id, account?.uuid ?? '')
       setItems((prev) => prev.filter((x) => x.id !== c.id))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete category')

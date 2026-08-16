@@ -42,6 +42,7 @@ export default function ProjectDetail() {
   const projectId = Number(id)
   const base = useAccountBase()
   const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const navigate = useNavigate()
 
   const [item, setItem] = useState<Project | null>(null)
@@ -58,10 +59,10 @@ export default function ProjectDetail() {
       return
     }
     api
-      .project(projectId)
+      .project(projectId, accountId)
       .then(setItem)
       .catch((e) => setError(e.message))
-  }, [projectId])
+  }, [projectId, accountId])
 
   const dirty = initialForm !== null && form !== null && JSON.stringify(form) !== JSON.stringify(initialForm)
 
@@ -108,9 +109,9 @@ export default function ProjectDetail() {
         available_from: form.availableFrom || null,
         available_to: form.availableTo || null,
       }
-      await api.updateProject(projectId, payload)
+      await api.updateProject(projectId, payload, accountId)
       setEditOpen(false)
-      const updated = await api.project(projectId)
+      const updated = await api.project(projectId, accountId)
       setItem(updated)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save project')
@@ -124,7 +125,7 @@ export default function ProjectDetail() {
     setBusy(true)
     setError('')
     try {
-      await api.deleteProject(item.id)
+      await api.deleteProject(item.id, accountId)
       navigate(`${base}/projects`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete project')

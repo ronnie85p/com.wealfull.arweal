@@ -4,6 +4,29 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+API_KEY_PERMISSIONS = [
+    'orders.read',
+    'orders.write',
+    'services.read',
+    'services.write',
+    'projects.read',
+    'projects.write',
+    'categories.read',
+    'categories.write',
+    'locations.read',
+    'locations.write',
+    'customers.read',
+    'customers.write',
+    'companies.read',
+    'companies.write',
+    'materials.read',
+    'materials.write',
+    'invoices.read',
+    'invoices.write',
+    'payments.read',
+    'payments.write',
+]
+
 
 class Profile(models.Model):
     user = models.OneToOneField(
@@ -61,6 +84,7 @@ class ApiKey(models.Model):
         'ApiDomain', on_delete=models.SET_NULL, null=True, blank=True, related_name='api_keys'
     )
     description = models.TextField(blank=True)
+    permissions = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
@@ -157,6 +181,46 @@ class AccountCustomer(models.Model):
                 fields=['account', 'customer'], name='account_customer_unique'
             ),
         ]
+
+
+class EmailSettings(models.Model):
+    account = models.OneToOneField(
+        Account, on_delete=models.CASCADE, related_name='email_settings'
+    )
+    host = models.CharField(max_length=255, blank=True)
+    port = models.PositiveIntegerField(default=587)
+    username = models.CharField(max_length=255, blank=True)
+    password = models.CharField(max_length=255, blank=True)
+    use_tls = models.BooleanField(default=True)
+    from_email = models.EmailField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f'Email settings for {self.account.uuid}'
+
+
+class EventLog(models.Model):
+    account = models.ForeignKey(
+        Account, on_delete=models.CASCADE, null=True, blank=True, related_name='events'
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='event_logs',
+    )
+    entity = models.CharField(max_length=50)
+    entity_id = models.PositiveBigIntegerField(null=True, blank=True)
+    entity_label = models.CharField(max_length=255, blank=True)
+    action = models.CharField(max_length=20)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.action} {self.entity}#{self.entity_id}'
         ordering = ['created_at']
 
     def __str__(self):

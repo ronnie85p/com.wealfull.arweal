@@ -265,7 +265,6 @@ export default function CreateOrder() {
     setSaving(true)
     try {
       const newProject = await api.createProject({
-        account_id: account?.uuid ?? null,
         name: projName.trim() || 'Project',
         description: projDetails,
         start_time: projStart || null,
@@ -274,9 +273,8 @@ export default function CreateOrder() {
         duration_unit: projDurationUnit,
         available_from: availFrom || null,
         available_to: availTo || null,
-      })
+      }, account?.uuid ?? '')
       await api.createOrder({
-        account_id: account?.uuid ?? null,
         amount: '0',
         materials,
         notes,
@@ -308,7 +306,7 @@ export default function CreateOrder() {
               zip: currentAddress.zip,
             }
           : null,
-      })
+      }, account?.uuid ?? '')
       navigate(`${base}/orders`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create order')
@@ -359,7 +357,7 @@ export default function CreateOrder() {
         price: unmaskAmount(item.amount) || '0',
         currency: 'EUR',
         status: 'active',
-      })
+      }, account?.uuid ?? '')
       setItemNotice(`"${item.name.trim()}" saved as service.`)
       setItemNoticeError(false)
     } catch (err) {

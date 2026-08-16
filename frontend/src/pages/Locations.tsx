@@ -54,10 +54,11 @@ export default function Locations() {
   }, [highlight])
 
   function load() {
-    api.locations().then(setItems).catch((e) => setError(e.message))
+    if (!account?.uuid) return
+    api.locations(undefined, account.uuid).then(setItems).catch((e) => setError(e.message))
   }
 
-  useEffect(load, [])
+  useEffect(load, [account?.uuid])
 
   useEffect(() => {
     const q = name.trim()
@@ -206,8 +207,8 @@ export default function Locations() {
       postal_code: placeData?.postal_code ?? '',
     }
     try {
-      if (editingId) await api.updateLocation(editingId, payload)
-      else await api.createLocation(payload)
+      if (editingId) await api.updateLocation(editingId, payload, account?.uuid ?? '')
+      else await api.createLocation(payload, account?.uuid ?? '')
       setModalOpen(false)
       load()
     } catch (err) {
@@ -220,7 +221,7 @@ export default function Locations() {
   async function remove(l: Location) {
     if (!window.confirm(`Delete location "${l.location}"?`)) return
     try {
-      await api.deleteLocation(l.id)
+      await api.deleteLocation(l.id, account?.uuid ?? '')
       setItems((prev) => prev.filter((x) => x.id !== l.id))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete location')
@@ -244,7 +245,7 @@ export default function Locations() {
       await api.updateLocation(editTarget.id, {
         description: editDescription.trim(),
         tags: editTags.join(', '),
-      })
+      }, account?.uuid ?? '')
       setEditOpen(false)
       load()
     } catch (err) {

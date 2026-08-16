@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, Order } from '../api'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const currency = (o: Order) =>
@@ -19,15 +20,17 @@ const projectsLine = (o: Order) => (o.project ? `#${o.project}` : '—')
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([])
   const base = useAccountBase()
+  const { account } = useAccountContext()
   const [filter, setFilter] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
+    if (!account?.uuid) return
     api
-      .orders()
+      .orders(account.uuid)
       .then(setOrders)
       .catch((e) => setError(e.message))
-  }, [])
+  }, [account?.uuid])
 
   const filtered = filter ? orders.filter((o) => o.status === filter) : orders
 

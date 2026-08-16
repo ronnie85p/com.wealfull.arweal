@@ -37,7 +37,7 @@ export default function CreateCustomer() {
           last_name: form.last_name.trim(),
           email: form.email.trim(),
         },
-        account?.uuid ?? null,
+        account?.uuid ?? '',
       )
       navigate(`${base}/customers/${user.id}`)
     } catch (err) {

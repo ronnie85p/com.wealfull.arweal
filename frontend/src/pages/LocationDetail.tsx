@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { api, Location, Service } from '../api'
 import Breadcrumbs from '../components/Breadcrumbs'
 import TagInput from '../components/TagInput'
+import { useAccountContext } from '../components/AccountContext'
 import { useAccountBase } from '../lib/account'
 
 const typeLabel = (type: string) => type.charAt(0).toUpperCase() + type.slice(1)
@@ -20,6 +21,8 @@ export default function LocationDetail() {
   const { id } = useParams()
   const locationId = Number(id)
   const base = useAccountBase()
+  const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
 
   const [item, setItem] = useState<Location | null>(null)
   const [error, setError] = useState('')
@@ -53,16 +56,16 @@ export default function LocationDetail() {
       return
     }
     api
-      .location(locationId)
+      .location(locationId, accountId)
       .then(setItem)
       .catch((e) => setError(e.message))
-  }, [locationId])
+  }, [locationId, accountId])
 
   function openAdd() {
     setAddError('')
     setAddOpen(true)
     api
-      .services()
+      .services(accountId)
       .then(setServices)
       .catch((e) => setAddError(e.message))
   }
@@ -77,8 +80,8 @@ export default function LocationDetail() {
           ...item.service_links.map((l) => ({ service_id: l.service_id })),
           { service_id: s.id },
         ],
-      })
-      const updated = await api.location(item.id)
+      }, accountId)
+      const updated = await api.location(item.id, accountId)
       setItem(updated)
     } catch (err) {
       setAddError(err instanceof Error ? err.message : 'Failed to add service')
@@ -104,9 +107,9 @@ export default function LocationDetail() {
       await api.updateLocation(item.id, {
         description: editDescription.trim(),
         tags: editTags.join(', '),
-      })
+      }, accountId)
       setEditOpen(false)
-      const updated = await api.location(item.id)
+      const updated = await api.location(item.id, accountId)
       setItem(updated)
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save location')

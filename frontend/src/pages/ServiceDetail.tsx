@@ -44,6 +44,7 @@ export default function ServiceDetail() {
   const serviceId = Number(id)
   const base = useAccountBase()
   const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const navigate = useNavigate()
 
   const [item, setItem] = useState<Service | null>(null)
@@ -65,20 +66,20 @@ export default function ServiceDetail() {
       return
     }
     api
-      .service(serviceId)
+      .service(serviceId, accountId)
       .then(setItem)
       .catch((e) => setError(e.message))
-  }, [serviceId])
+  }, [serviceId, accountId])
 
   useEffect(() => {
-    api.categories().then(setCategories).catch(() => undefined)
-  }, [])
+    if (accountId) api.categories(undefined, accountId).then(setCategories).catch(() => undefined)
+  }, [accountId])
   useEffect(() => {
-    api.locations().then(setLocations).catch(() => undefined)
-  }, [])
+    if (accountId) api.locations(undefined, accountId).then(setLocations).catch(() => undefined)
+  }, [accountId])
   useEffect(() => {
-    api.services().then(setServices).catch(() => undefined)
-  }, [])
+    if (accountId) api.services(accountId).then(setServices).catch(() => undefined)
+  }, [accountId])
 
   const category = item ? categories.find((c) => c.id === item.category_id) : undefined
 
@@ -170,9 +171,9 @@ export default function ServiceDetail() {
         category_id: form.categoryId ? Number(form.categoryId) : null,
         service_locations: form.locations.map((l) => ({ location_id: l.id })),
       }
-      await api.updateService(serviceId, payload)
+      await api.updateService(serviceId, payload, accountId)
       setEditOpen(false)
-      const updated = await api.service(serviceId)
+      const updated = await api.service(serviceId, accountId)
       setItem(updated)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to save service')
@@ -186,7 +187,7 @@ export default function ServiceDetail() {
     setBusy(true)
     setError('')
     try {
-      await api.deleteService(item.id)
+      await api.deleteService(item.id, accountId)
       navigate(`${base}/services`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete service')

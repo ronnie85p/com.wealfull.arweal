@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { api, Order } from '../api'
+import { useAccountContext } from '../components/AccountContext'
 
 export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([])
+  const { account } = useAccountContext()
 
   useEffect(() => {
-    api.orders().then(setOrders).catch(() => undefined)
-  }, [])
+    if (!account?.uuid) return
+    api.orders(account.uuid).then(setOrders).catch(() => undefined)
+  }, [account?.uuid])
 
   const total = orders.reduce((sum, o) => sum + Number(o.amount), 0)
   const paid = orders.filter((o) => o.status === 'paid').reduce((s, o) => s + Number(o.amount), 0)

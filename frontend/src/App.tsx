@@ -7,6 +7,7 @@ import { AccountProvider } from './components/AccountContext'
 import { accountBase } from './lib/account'
 import ErrorPage from './pages/Error'
 import ApiPage from './pages/Api'
+import ApiKeyDetail from './pages/ApiKeyDetail'
 import Categories from './pages/Categories'
 import CategoryDetail from './pages/CategoryDetail'
 import Locations from './pages/Locations'
@@ -41,6 +42,7 @@ import Employers from './pages/Employers'
 import InviteEmployer from './pages/InviteEmployer'
 import CreateCompany from './pages/CreateCompany'
 import Settings from './pages/Settings'
+import Logs from './pages/Logs'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -114,6 +116,7 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="api" element={<ApiPage />} />
+        <Route path="api/keys/:id" element={<ApiKeyDetail />} />
         <Route path="customers" element={<Customers />} />
         <Route path="customers/new" element={<CreateCustomer />} />
         <Route path="customers/:id" element={<CustomerDetail />} />
@@ -140,6 +143,7 @@ export default function App() {
         <Route path="settings" element={<Settings />} />
         <Route path="invoices" element={<Invoices />} />
         <Route path="payments" element={<Payments />} />
+        <Route path="logs" element={<Logs />} />
       </Route>
       <Route path="/" element={<Navigate to={base} replace />} />
       <Route path="*" element={<NotFound />} />

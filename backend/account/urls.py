@@ -5,8 +5,6 @@ from . import views
 
 router = DefaultRouter()
 router.trailing_slash = ''
-router.register('api-keys', views.ApiKeyViewSet, basename='api-key')
-router.register('api-domains', views.ApiDomainViewSet, basename='api-domain')
 
 urlpatterns = [
     path('auth/login', views.LoginView.as_view(), name='login'),
@@ -25,6 +23,17 @@ urlpatterns = [
     path('account-types', views.AccountTypeListView.as_view(), name='account-types'),
     path('account', views.AccountDetailView.as_view(), name='account-detail'),
     path('account/<uuid:uuid>', views.AccountDetailView.as_view(), name='account-detail-uuid'),
+    path('account/<uuid:account_id>/api-keys', views.AccountApiKeyListView.as_view(), name='account-api-keys'),
+    path('account/<uuid:account_id>/api-keys/<int:pk>', views.AccountApiKeyDetailView.as_view(), name='account-api-key-detail'),
+    path('account/<uuid:account_id>/api-domains', views.AccountApiDomainListView.as_view(), name='account-api-domains'),
+    path('account/<uuid:account_id>/api-domains/<int:pk>', views.AccountApiDomainDetailView.as_view(), name='account-api-domain-detail'),
+    path('account/<uuid:account_id>/companies', views.CompanyListView.as_view(), name='account-companies'),
+    path('account/<uuid:account_id>/companies/<int:pk>', views.CompanyDetailView.as_view(), name='account-company-detail'),
+    path('account/<uuid:account_id>/customers', views.CustomerListView.as_view(), name='account-customers'),
+    path('account/<uuid:account_id>/customers/<int:pk>', views.CustomerUnbindView.as_view(), name='account-customer-unbind'),
+    path('account/<uuid:account_id>/events', views.AccountEventListView.as_view(), name='account-events'),
+    path('account/<uuid:account_id>/email-settings', views.AccountEmailSettingsView.as_view(), name='account-email-settings'),
+    path('account/<uuid:account_id>/email-settings/test', views.EmailTestSendView.as_view(), name='account-email-settings-test'),
     path('users', views.UserListView.as_view(), name='users'),
     path('users/recent', views.UserRecentView.as_view(), name='users-recent'),
     path('users/invite', views.UserInviteView.as_view(), name='user-invite'),
@@ -32,12 +41,7 @@ urlpatterns = [
     path('users/<int:user_id>/orders', views.UserOrdersView.as_view(), name='user-orders'),
     path('users/<int:user_id>/addresses', views.AddressListCreateView.as_view(), name='user-addresses'),
     path('users/<int:user_id>/addresses/<int:pk>', views.AddressDetailView.as_view(), name='user-address-detail'),
-    path('companies', views.CompanyListView.as_view(), name='companies'),
     path('places/autocomplete', views.PlacesAutocompleteView.as_view(), name='places-autocomplete'),
     path('places/details', views.PlacesDetailsView.as_view(), name='places-details'),
-    path('api-keys/create', views.ApiKeyCreateView.as_view(), name='api-key-create'),
-    path('api-domains/create', views.ApiDomainCreateView.as_view(), name='api-domain-create'),
-    path('customers', views.CustomerListView.as_view(), name='customers'),
-    path('customers/<int:pk>', views.CustomerUnbindView.as_view(), name='customer-unbind'),
     path('', include(router.urls)),
 ]

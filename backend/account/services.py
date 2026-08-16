@@ -89,3 +89,73 @@ def consume_code(target, code) -> bool:
         return False
     clear_code(target)
     return True
+
+
+def send_account_email(account, subject, message, recipients, fail_silently=True):
+    """Send email using the account's SMTP settings when configured,
+    otherwise fall back to the global EMAIL_* settings.
+
+    Logs a ``mail`` event with action ``sent``/``failed`` on *account*.
+    """
+    from django.conf import settings as dj_settings
+    from django.core.mail import EmailMessage, get_connection
+
+    from integrator.events import log_event
+    from integrator.models import EmailSettings
+
+    s = EmailSettings.objects.filter(account=account).first()
+    channel = 'account' if s and s.host else 'env'
+    kwargs = {}
+    use_smtp = False
+    if s and s.host:
+        kwargs.update({
+            'host': s.host,
+            'port': s.port or dj_settings.EMAIL_PORT,
+            'username': s.username or '',
+            'password': s.password or '',
+            'use_tls': s.use_tls,
+            'use_ssl': False,
+            'timeout': dj_settings.EMAIL_TIMEOUT,
+        })
+        use_smtp = True
+    elif dj_settings.EMAIL_HOST:
+        use_ssl = dj_settings.EMAIL_USE_SSL
+        kwargs.update({
+            'host': dj_settings.EMAIL_HOST,
+            'port': dj_settings.EMAIL_PORT,
+            'username': dj_settings.EMAIL_HOST_USER,
+            'password': dj_settings.EMAIL_HOST_PASSWORD,
+            'use_tls': dj_settings.EMAIL_USE_TLS and not use_ssl,
+            'use_ssl': use_ssl,
+            'timeout': dj_settings.EMAIL_TIMEOUT,
+        })
+        use_smtp = True
+    from_email = (s.from_email if s and s.from_email else '') or dj_settings.DEFAULT_FROM_EMAIL
+    backend = (
+        'django.core.mail.backends.smtp.EmailBackend' if use_smtp else dj_settings.EMAIL_BACKEND
+    )
+    connection = get_connection(backend=backend, fail_silently=fail_silently, **kwargs)
+    message = EmailMessage(subject, message, from_email, recipients, connection=connection)
+    try:
+        result = message.send()
+    except Exception as exc:
+        log_event(
+            account,
+            'mail',
+            None,
+            'failed',
+            {'to': list(recipients), 'subject': subject, 'channel': channel, 'error': str(exc)},
+            label=subject,
+        )
+        if not fail_silently:
+            raise
+        return 0
+    log_event(
+        account,
+        'mail',
+        None,
+        'sent',
+        {'to': list(recipients), 'subject': subject, 'channel': channel},
+        label=subject,
+    )
+    return result

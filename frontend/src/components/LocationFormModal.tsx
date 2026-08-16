@@ -1,6 +1,7 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { api, Location, PlaceDetails, PlaceSuggestion } from '../api'
 import TagInput from './TagInput'
+import { useAccountContext } from './AccountContext'
 
 function detectType(types?: string[]): string {
   if (!types?.length) return ''
@@ -20,6 +21,8 @@ interface LocationFormModalProps {
 }
 
 export default function LocationFormModal({ onClose, onCreated }: LocationFormModalProps) {
+  const { account } = useAccountContext()
+  const accountId = account?.uuid ?? ''
   const [name, setName] = useState('')
   const [committedName, setCommittedName] = useState('')
   const [pickedType, setPickedType] = useState('')
@@ -136,7 +139,7 @@ export default function LocationFormModal({ onClose, onCreated }: LocationFormMo
         state: placeData?.state ?? '',
         short_state: placeData?.short_state ?? '',
         postal_code: placeData?.postal_code ?? '',
-      })
+      }, accountId)
       onCreated(location)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create location')

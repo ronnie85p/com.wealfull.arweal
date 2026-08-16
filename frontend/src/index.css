@@ -13,6 +13,8 @@
   --red: #e74c3c;
   --danger: #ff5f57;
   --amber: #f39c12;
+  --blue: #5a78ff;
+  --purple: #9b59b6;
   --radius: 10px;
 }
 
@@ -1605,6 +1607,10 @@ form.panel {
   border-bottom: 1px solid var(--border);
 }
 
+.table td.status-cell {
+  padding: 0;
+}
+
 .table tr:last-child td {
   border-bottom: none;
 }
@@ -1659,9 +1665,184 @@ form.panel {
   text-decoration: line-through;
 }
 
+.badge-create {
+  background: rgba(46, 204, 113, 0.15);
+  color: var(--green);
+}
+
+.badge-update {
+  background: rgba(243, 156, 18, 0.15);
+  color: var(--amber);
+}
+
+.badge-delete {
+  background: rgba(231, 76, 60, 0.15);
+  color: var(--red);
+}
+
+.badge-restore {
+  background: rgba(90, 120, 255, 0.15);
+  color: var(--blue);
+}
+
+.badge-call {
+  background: rgba(155, 89, 182, 0.15);
+  color: var(--purple);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(139, 144, 181, 0.2);
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn.active {
+  color: var(--text);
+  border-bottom-color: var(--blue);
+}
+
+.log-payload {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(139, 144, 181, 0.08);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-payload .j-key {
+  color: var(--blue);
+}
+
+.log-payload .j-str {
+  color: #2e8b57;
+}
+
+.log-payload .j-lit {
+  color: #b76e2e;
+  font-weight: 600;
+}
+
+.log-payload .j-num {
+  color: #6a5acd;
+}
+
+.log-response {
+  margin-bottom: 8px;
+}
+
+.log-response strong {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.response-toggle-text {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.response-toggle-text:hover {
+  color: var(--blue);
+}
+
+.status-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  line-height: 18px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.status-ok {
+  color: #fff;
+  background: #22a06b;
+}
+
+.status-err {
+  color: #fff;
+  background: #d64545;
+}
+
+.logs-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.logs-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.logs-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.logs-filters input,
+.logs-filters select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.logs-nav .btn-sm:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.logs-nav-info {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 tr.deleted-row td {
   opacity: 1;
   background: rgba(90, 120, 255, 0.06);
+}
+
+tr.expanded-row td {
+  background: rgba(90, 120, 255, 0.1);
 }
 
 .service-images {
