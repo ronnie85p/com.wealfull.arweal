@@ -1,15 +1,12 @@
-import { existsSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  const prodEnv = existsSync('.env.production')
-    ? loadEnv('production', process.cwd(), '')
-    : {}
-  const effective = { ...env, ...prodEnv }
-  const prodDefine = Object.fromEntries(
-    Object.entries(prodEnv)
+  const baseEnv = loadEnv('__base__', process.cwd(), '')
+  const modeEnv = loadEnv(mode, process.cwd(), '')
+  const effective = { ...baseEnv, ...modeEnv }
+  const define = Object.fromEntries(
+    Object.entries(effective)
       .filter(([key]) => key.startsWith('VITE_'))
       .map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)]),
   )
@@ -18,7 +15,7 @@ export default defineConfig(({ mode }) => {
   return {
     base: '/',
     plugins: [react()],
-    define: prodDefine,
+    define,
     test: {
       environment: 'jsdom',
       globals: true,
