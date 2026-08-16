@@ -37,6 +37,9 @@ def convert_domain_to_fk(apps, schema_editor):
         )
 
     if has_domain_id:
+        schema_editor.execute(
+            'ALTER TABLE integrator_apikey MODIFY COLUMN domain_id VARCHAR(255) NULL'
+        )
         schema_editor.execute('UPDATE integrator_apikey SET domain_id = NULL')
         schema_editor.execute(
             'ALTER TABLE integrator_apikey MODIFY COLUMN domain_id BIGINT NULL'
