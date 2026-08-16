@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(clear_domain_values, migrations.RunPython.noop),
+        migrations.RunPython(clear_domain_values, migrations.RunPython.noop, atomic=False),
         migrations.AlterField(
             model_name='apikey',
             name='domain',
