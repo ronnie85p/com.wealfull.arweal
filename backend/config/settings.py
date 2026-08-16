@@ -36,8 +36,16 @@ EMAIL_HOST = os.environ.get('SMTP_HOST', '')
 EMAIL_PORT = int(os.environ.get('SMTP_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('SMTP_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
-EMAIL_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
-EMAIL_USE_SSL = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
+_smtp_use_ssl = os.environ.get('SMTP_USE_SSL', '').strip().lower()
+_smtp_use_tls = os.environ.get('SMTP_USE_TLS', '').strip().lower()
+if _smtp_use_ssl:
+    EMAIL_USE_SSL = _smtp_use_ssl == 'true'
+else:
+    EMAIL_USE_SSL = EMAIL_PORT == 465
+if _smtp_use_tls:
+    EMAIL_USE_TLS = _smtp_use_tls == 'true'
+else:
+    EMAIL_USE_TLS = EMAIL_PORT != 465
 EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '10'))
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@wealfull.com')
 

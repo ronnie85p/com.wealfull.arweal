@@ -108,13 +108,15 @@ def send_account_email(account, subject, message, recipients, fail_silently=True
     kwargs = {}
     use_smtp = False
     if s and s.host:
+        port = s.port or dj_settings.EMAIL_PORT
+        use_ssl = port == 465
         kwargs.update({
             'host': s.host,
-            'port': s.port or dj_settings.EMAIL_PORT,
+            'port': port,
             'username': s.username or '',
             'password': s.password or '',
-            'use_tls': s.use_tls,
-            'use_ssl': False,
+            'use_tls': s.use_tls and not use_ssl,
+            'use_ssl': use_ssl,
             'timeout': dj_settings.EMAIL_TIMEOUT,
         })
         use_smtp = True
