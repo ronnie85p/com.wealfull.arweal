@@ -186,7 +186,7 @@ export default function CreateOrder() {
       const d = await api.placeDetails(p.place_id)
       setAddressForm((f) => ({
         ...f,
-        state: d.state,
+        state: d.short_state || d.state,
         city: d.city,
         street: d.street,
         zip: d.postal_code,
@@ -352,7 +352,7 @@ export default function CreateOrder() {
       await api.createService({
         name: item.name.trim(),
         description: item.description.trim(),
-        amount: unmaskAmount(item.amount) || '0',
+        price: unmaskAmount(item.amount) || '0',
         currency: 'EUR',
         status: 'active',
       })

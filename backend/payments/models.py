@@ -102,6 +102,11 @@ class Service(models.Model):
         ('active', 'Active'),
         ('inactive', 'Inactive'),
     ]
+    DURATION_UNIT_CHOICES = [
+        ('days', 'Days'),
+        ('weeks', 'Weeks'),
+        ('months', 'Months'),
+    ]
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='services'
@@ -110,11 +115,151 @@ class Service(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_services'
     )
     name = models.CharField(max_length=200)
+    short_description = models.CharField(max_length=200, blank=True)
     description = models.TextField(blank=True)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    features = models.CharField(max_length=200, blank=True)
+    tags = models.CharField(max_length=200, blank=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    old_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    duration_start = models.PositiveIntegerField(default=0)
+    duration_end = models.PositiveIntegerField(default=0)
+    duration_unit = models.CharField(max_length=20, choices=DURATION_UNIT_CHOICES, default='days')
     currency = models.CharField(max_length=3, default='EUR')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    category = models.ForeignKey(
+        'Category', on_delete=models.SET_NULL, null=True, blank=True, related_name='services'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='services_created_by',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='services_updated_by',
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='services_deleted_by',
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class ServiceImage(models.Model):
+    service = models.ForeignKey(
+        'Service', on_delete=models.CASCADE, related_name='images'
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_service_images'
+    )
+    image = models.ImageField(upload_to='services/%Y/%m/')
+    uri = models.CharField(max_length=500, blank=True)
+    url = models.CharField(max_length=1000, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.image:
+            self.uri = self.image.name
+            self.url = self.image.url
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Service image #{self.pk}'
+
+
+class LocationServices(models.Model):
+    location = models.ForeignKey(
+        'Location', on_delete=models.CASCADE, related_name='service_links'
+    )
+    service = models.ForeignKey(
+        'Service', on_delete=models.CASCADE, related_name='location_links'
+    )
+
+    class Meta:
+        db_table = 'location_services'
+        constraints = [
+            models.UniqueConstraint(fields=['location', 'service'], name='location_services_unique'),
+        ]
+
+
+class Category(models.Model):
+    account = models.ForeignKey(
+        'integrator.Account', on_delete=models.SET_NULL, null=True, blank=True, related_name='categories'
+    )
+    name = models.CharField(max_length=200)
+    full_name = models.CharField(max_length=200, blank=True)
+    description = models.TextField(blank=True)
+    tags = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='categories_created_by',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='categories_updated_by',
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='categories_deleted_by',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['account', 'name'], name='category_account_name_unique'),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class Location(models.Model):
+    TYPE_CHOICES = [
+        ('city', 'City'),
+        ('county', 'County'),
+        ('state', 'State'),
+    ]
+
+    account = models.ForeignKey(
+        'integrator.Account', on_delete=models.SET_NULL, null=True, blank=True, related_name='locations'
+    )
+    services = models.ManyToManyField(
+        'Service', blank=True, related_name='locations', through='LocationServices'
+    )
+    location = models.CharField(max_length=200, unique=True)
+    full_location = models.TextField(blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    country = models.CharField(max_length=120, blank=True)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, blank=True)
+    city = models.CharField(max_length=120, blank=True)
+    county = models.CharField(max_length=120, blank=True)
+    state = models.CharField(max_length=120, blank=True)
+    short_state = models.CharField(max_length=20, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
+    description = models.TextField(blank=True)
+    tags = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='locations_created_by',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='locations_updated_by',
+    )
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='locations_deleted_by',
+    )
 
     def __str__(self):
         return self.name
@@ -141,6 +286,7 @@ class Project(models.Model):
     duration_unit = models.CharField(max_length=20, choices=DURATION_UNIT_CHOICES, default='days')
     available_from = models.DateTimeField(null=True, blank=True)
     available_to = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

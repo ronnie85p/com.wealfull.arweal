@@ -4,6 +4,8 @@ from . import views
 
 router = DefaultRouter()
 router.trailing_slash = ''
+router.register('categories', views.CategoryViewSet, basename='category')
+router.register('locations', views.LocationViewSet, basename='location')
 router.register('orders', views.OrderViewSet, basename='order')
 router.register('services', views.ServiceViewSet, basename='service')
 router.register('materials', views.MaterialViewSet, basename='material')

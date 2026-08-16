@@ -16,7 +16,7 @@ export default function ApiPage() {
   const [keyModalOpen, setKeyModalOpen] = useState(false)
   const [domainModalOpen, setDomainModalOpen] = useState(false)
   const [name, setName] = useState('')
-  const [domain, setDomain] = useState('')
+  const [domain, setDomain] = useState<string | number>('')
   const [domainName, setDomainName] = useState('')
   const [domainDescription, setDomainDescription] = useState('')
   const [description, setDescription] = useState('')
@@ -50,7 +50,7 @@ export default function ApiPage() {
 
   function openKeyModal() {
     setName('')
-    setDomain(domains[0]?.domain ?? '')
+    setDomain(domains[0]?.id ?? '')
     setDescription('')
     setError('')
     setKeyModalOpen(true)
@@ -69,7 +69,7 @@ export default function ApiPage() {
     setBusy(true)
     setError('')
     try {
-      await api.createApiKey(name.trim(), description.trim(), domain.trim(), accountId)
+      await api.createApiKey(name.trim(), description.trim(), domain ? Number(domain) : null, accountId)
       setKeyModalOpen(false)
       load()
     } catch (err) {
@@ -171,7 +171,7 @@ export default function ApiPage() {
                     </button>
                   </span>
                 </td>
-                <td>{k.domain || '—'}</td>
+                <td>{domains.find((d) => d.id === k.domain_id)?.domain ?? '—'}</td>
                 <td>{k.description || '—'}</td>
                 <td>{new Date(k.created_at).toLocaleDateString()}</td>
                 <td>
@@ -239,7 +239,7 @@ export default function ApiPage() {
                 <select value={domain} onChange={(e) => setDomain(e.target.value)}>
                   {domains.length === 0 && <option value="">None</option>}
                   {domains.map((d) => (
-                    <option key={d.id} value={d.domain}>
+                    <option key={d.id} value={d.id}>
                       {d.domain}
                     </option>
                   ))}

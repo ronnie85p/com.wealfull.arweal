@@ -60,14 +60,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 class ApiKeySerializer(serializers.ModelSerializer):
     key = serializers.CharField(read_only=True)
-    account = serializers.SlugRelatedField(slug_field='uuid', read_only=True)
     account_id = serializers.SlugRelatedField(
-        source='account', slug_field='uuid', queryset=Account.objects.all(), required=False, allow_null=True, write_only=True
+        source='account', slug_field='uuid', queryset=Account.objects.all(), required=False, allow_null=True
+    )
+    domain_id = serializers.PrimaryKeyRelatedField(
+        source='domain', queryset=ApiDomain.objects.all(), required=False, allow_null=True
     )
 
     class Meta:
         model = ApiKey
-        fields = ['id', 'account', 'account_id', 'name', 'key', 'domain', 'description', 'created_at', 'updated_at', 'last_used_at']
+        fields = ['id', 'account_id', 'name', 'key', 'domain_id', 'description', 'created_at', 'updated_at', 'last_used_at']
         read_only_fields = ['created_at', 'updated_at', 'last_used_at', 'key']
 
 

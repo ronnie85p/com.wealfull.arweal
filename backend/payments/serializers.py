@@ -1,9 +1,22 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from integrator.models import Address
+from integrator.models import Account, Address
 
-from .models import Invoice, Material, Order, OrderAddress, OrderItem, Payment, Project, Service
+from .models import (
+    Category,
+    Invoice,
+    Location,
+    LocationServices,
+    Material,
+    Order,
+    OrderAddress,
+    OrderItem,
+    Payment,
+    Project,
+    Service,
+    ServiceImage,
+)
 
 
 class OrderAddressSerializer(serializers.ModelSerializer):
@@ -113,6 +126,13 @@ class OrderSerializer(serializers.ModelSerializer):
         return instance
 
 
+class ServiceImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceImage
+        fields = ['id', 'uri', 'url', 'order', 'created_at']
+        read_only_fields = ['id', 'uri', 'url', 'order', 'created_at']
+
+
 class ServiceSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), required=False, default=serializers.CurrentUserDefault()
@@ -121,12 +141,152 @@ class ServiceSerializer(serializers.ModelSerializer):
         queryset=User.objects.all(), required=False, default=serializers.CurrentUserDefault()
     )
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        source='category', queryset=Category.objects.all(), required=False, allow_null=True
+    )
+    service_locations = serializers.ListField(
+        child=serializers.DictField(), required=False, write_only=True
+    )
+    location_links = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField()
 
     class Meta:
         model = Service
-        fields = ['id', 'user', 'owner', 'name', 'description', 'amount', 'currency', 'status',
-                  'status_display', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'user', 'owner', 'name', 'short_description', 'description', 'features', 'tags', 'price',
+                  'old_price', 'duration_start', 'duration_end', 'duration_unit', 'currency', 'status', 'status_display',
+                  'category_id', 'service_locations', 'location_links', 'images', 'created_at',
+                  'created_by', 'updated_by', 'deleted_by']
+        read_only_fields = ['id', 'created_at', 'created_by', 'updated_by', 'deleted_by']
+
+    def get_location_links(self, obj):
+        return [
+            {'location_id': link.location_id, 'location_name': link.location.full_location or link.location.location}
+            for link in obj.location_links.select_related('location').all()
+        ]
+
+    def get_images(self, obj):
+        return ServiceImageSerializer(
+            obj.images.order_by('order', 'id').all(), many=True
+        ).data
+
+    def validate_category(self, value):
+        account = Account.objects.filter(user=self.context['request'].user).order_by('id').first()
+        if value is not None and account is not None and value.account_id != account.id:
+            raise serializers.ValidationError('Invalid category.')
+        return value
+
+    def validate_name(self, value):
+        name = value.strip()
+        if not name:
+            return value
+        category_id = self.initial_data.get('category_id')
+        if category_id in (None, ''):
+            category_id = getattr(self.instance, 'category_id', None)
+        qs = Service.objects.filter(name__iexact=name)
+        if category_id not in (None, ''):
+            qs = qs.filter(category_id=category_id)
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError(
+                'A service with this name already exists in the selected category.'
+            )
+        return value
+
+    def _set_links(self, service, links):
+        service.location_links.all().delete()
+        for link in links:
+            location_id = link.get('location_id')
+            if not location_id:
+                continue
+            if not Location.objects.filter(id=location_id).exists():
+                raise serializers.ValidationError({'service_locations': 'Invalid location.'})
+            LocationServices.objects.create(service=service, location_id=location_id)
+
+    def create(self, validated_data):
+        links = validated_data.pop('service_locations', [])
+        service = super().create(validated_data)
+        self._set_links(service, links)
+        return service
+
+    def update(self, instance, validated_data):
+        links = validated_data.pop('service_locations', [])
+        service = super().update(instance, validated_data)
+        if links:
+            self._set_links(service, links)
+        return service
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    account_id = serializers.SlugRelatedField(
+        slug_field='uuid', queryset=Account.objects.all(), source='account',
+        required=False, allow_null=True,
+    )
+    class Meta:
+        model = Category
+        fields = ['id', 'account_id', 'name', 'full_name', 'description', 'tags', 'created_at', 'updated_at',
+                  'created_by', 'updated_by', 'deleted_by']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_by']
+
+    def validate_name(self, value):
+        account = Account.objects.filter(user=self.context['request'].user).order_by('id').first()
+        if (
+            Category.objects.filter(account=account, name=value)
+            .exclude(pk=getattr(self.instance, 'pk', None))
+            .exists()
+        ):
+            raise serializers.ValidationError('A category with this name already exists.')
+        return value
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    account_id = serializers.SlugRelatedField(
+        slug_field='uuid', queryset=Account.objects.all(), source='account',
+        required=False, allow_null=True,
+    )
+    location_services = serializers.ListField(
+        child=serializers.DictField(), required=False, write_only=True
+    )
+    service_links = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Location
+        fields = [
+            'id', 'account_id', 'location', 'full_location', 'latitude', 'longitude',
+            'country', 'type', 'city', 'county', 'state', 'short_state', 'postal_code',
+            'description', 'tags', 'service_links', 'location_services', 'created_at', 'updated_at',
+            'created_by', 'updated_by', 'deleted_by',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_by']
+
+    def get_service_links(self, obj):
+        return [
+            {'service_id': link.service_id, 'service_name': link.service.name}
+            for link in obj.service_links.select_related('service').all()
+        ]
+
+    def _set_links(self, location, links):
+        location.services.clear()
+        for link in links:
+            service_id = link.get('service_id')
+            if not service_id:
+                continue
+            if not Service.objects.filter(id=service_id).exists():
+                raise serializers.ValidationError({'location_services': 'Invalid service.'})
+            LocationServices.objects.create(location=location, service_id=service_id)
+
+    def create(self, validated_data):
+        links = validated_data.pop('location_services', [])
+        location = super().create(validated_data)
+        self._set_links(location, links)
+        return location
+
+    def update(self, instance, validated_data):
+        links = validated_data.pop('location_services', [])
+        location = super().update(instance, validated_data)
+        if links:
+            self._set_links(location, links)
+        return location
 
 
 class MaterialSerializer(serializers.ModelSerializer):

@@ -177,3 +177,39 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+USE_S3 = os.environ.get('USE_S3', 'false').lower() == 'true'
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
+    AWS_S3_ENDPOINT_URL = os.environ.get(
+        'AWS_S3_ENDPOINT_URL', 'https://s3.ru1.storage.selcloud.ru'
+    )
+    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'ru-1')
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_QUERYSTRING_AUTH = os.environ.get('AWS_QUERYSTRING_AUTH', 'false').lower() == 'true'
+    AWS_DEFAULT_ACL = os.environ.get('AWS_DEFAULT_ACL', 'public-read')
+    AWS_CUSTOM_DOMAIN = os.environ.get('AWS_CUSTOM_DOMAIN', '')
+    MEDIA_URL = (
+        f'https://{AWS_CUSTOM_DOMAIN}/'
+        if AWS_CUSTOM_DOMAIN
+        else f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+    )
+
+STORAGES = {
+    'default': {
+        'BACKEND': (
+            'storages.backends.s3boto3.S3Boto3Storage'
+            if USE_S3
+            else 'django.core.files.storage.FileSystemStorage'
+        ),
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}

@@ -160,7 +160,7 @@ def _source_matches(source_host: str, allowed: str) -> bool:
 
 def _domain_allowed_for_key(api_key, source_host: str, client_ip: str) -> bool:
     source = source_host or client_ip
-    if _source_matches(source, api_key.domain):
+    if api_key.domain_id and _source_matches(source, api_key.domain.domain):
         return True
     domains = ApiDomain.objects.filter(account_id=api_key.account_id)
     for d in domains:

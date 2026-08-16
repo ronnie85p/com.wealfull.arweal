@@ -7,6 +7,10 @@ import { AccountProvider } from './components/AccountContext'
 import { accountBase } from './lib/account'
 import ErrorPage from './pages/Error'
 import ApiPage from './pages/Api'
+import Categories from './pages/Categories'
+import CategoryDetail from './pages/CategoryDetail'
+import Locations from './pages/Locations'
+import LocationDetail from './pages/LocationDetail'
 import DocsPage from './pages/Docs'
 import CreateCustomer from './pages/CreateCustomer'
 import CreateOrder from './pages/CreateOrder'
@@ -27,14 +31,12 @@ import NotAuthorized from './pages/NotAuthorized'
 import Orders from './pages/Orders'
 import Payments from './pages/Payments'
 import Services from './pages/Services'
-import CreateService from './pages/CreateService'
-import EditService from './pages/EditService'
+import ServiceDetail from './pages/ServiceDetail'
 import Materials from './pages/Materials'
 import CreateMaterial from './pages/CreateMaterial'
 import EditMaterial from './pages/EditMaterial'
 import Projects from './pages/Projects'
-import CreateProject from './pages/CreateProject'
-import EditProject from './pages/EditProject'
+import ProjectDetail from './pages/ProjectDetail'
 import Employers from './pages/Employers'
 import CreateCompany from './pages/CreateCompany'
 import Settings from './pages/Settings'
@@ -121,14 +123,16 @@ export default function App() {
         <Route path="orders/new" element={<CreateOrder />} />
         <Route path="orders/:id/edit" element={<EditOrder />} />
         <Route path="services" element={<Services />} />
-        <Route path="services/new" element={<CreateService />} />
-        <Route path="services/:id/edit" element={<EditService />} />
+        <Route path="services/:id" element={<ServiceDetail />} />
+        <Route path="categories" element={<Categories />} />
+        <Route path="categories/:id" element={<CategoryDetail />} />
+        <Route path="locations" element={<Locations />} />
+        <Route path="locations/:id" element={<LocationDetail />} />
         <Route path="materials" element={<Materials />} />
         <Route path="materials/new" element={<CreateMaterial />} />
         <Route path="materials/:id/edit" element={<EditMaterial />} />
         <Route path="projects" element={<Projects />} />
-        <Route path="projects/new" element={<CreateProject />} />
-        <Route path="projects/:id/edit" element={<EditProject />} />
+        <Route path="projects/:id" element={<ProjectDetail />} />
         <Route path="employers" element={<Employers />} />
         <Route path="companies/new" element={<CreateCompany />} />
         <Route path="settings" element={<Settings />} />

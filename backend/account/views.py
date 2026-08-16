@@ -562,6 +562,9 @@ class ApiKeyCreateView(generics.CreateAPIView):
             raise serializers.ValidationError({'account_id': 'No account for this user.'})
         if account.user_id != self.request.user.id:
             raise serializers.ValidationError({'account_id': 'Invalid account.'})
+        domain = serializer.validated_data.get('domain')
+        if domain is not None and domain.account_id != account.id:
+            raise serializers.ValidationError({'domain_id': 'Invalid domain.'})
         serializer.save(account=account)
 
 
@@ -613,7 +616,7 @@ class ApiDomainViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        linked = ApiKey.objects.filter(account=instance.account, domain=instance.domain).count()
+        linked = ApiKey.objects.filter(account=instance.account, domain=instance).count()
         if linked:
             return Response(
                 {'detail': f'Cannot delete domain: {linked} API key(s) are linked to it.'},

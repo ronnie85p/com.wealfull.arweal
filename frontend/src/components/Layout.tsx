@@ -9,12 +9,7 @@ import { useAccountBase } from '../lib/account'
 function menu(base: string) {
   return [
     { to: `${base}`, label: 'Dashboard', end: true },
-    { to: `${base}/orders`, label: 'Orders', end: false },
-    { to: `${base}/services`, label: 'Services', end: false },
     { to: `${base}/materials`, label: 'Materials', end: false },
-    { to: `${base}/projects`, label: 'Projects', end: false },
-    { to: `${base}/employers`, label: 'Employers', end: false },
-    { to: `${base}/customers`, label: 'Customers', end: false },
     { to: `${base}/invoices`, label: 'Invoices', end: false },
     { to: `${base}/payments`, label: 'Payments', end: false },
   ]
@@ -85,7 +80,6 @@ export default function Layout() {
                 <span>{fullName}</span>
                 {accountTypeName && <small>{accountTypeName}</small>}
               </span>
-              <span className={`status-dot ${user?.online ? 'online' : 'offline'}`} />
               <span className="company-caret">▾</span>
             </button>
             {profileOpen && (

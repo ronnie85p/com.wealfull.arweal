@@ -164,12 +164,74 @@ export interface Invoice {
 export interface Service {
   id: number
   name: string
+  short_description: string
   description: string
-  amount: string
+  features: string
+  tags: string
+  price: string
+  old_price: string
+  duration_start: number
+  duration_end: number
+  duration_unit: string
   currency: string
   status: string
   status_display: string
+  category_id: number | null
+  location_links: ServiceLocationLink[]
+  images: ServiceImage[]
   created_at: string
+  deleted?: boolean
+}
+
+export interface ServiceImage {
+  id: number
+  uri: string
+  url: string
+  order: number
+  created_at: string
+}
+
+export interface ServiceLocationLink {
+  location_id: number
+  location_name: string
+}
+
+export interface Category {
+  id: number
+  account_id: string | null
+  name: string
+  full_name: string
+  description: string
+  tags: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Location {
+  id: number
+  account_id: string | null
+  location: string
+  full_location: string
+  latitude: number | null
+  longitude: number | null
+  country: string
+  type: string
+  city: string
+  county: string
+  state: string
+  short_state: string
+  postal_code: string
+  description: string
+  tags: string
+  service_links: LocationServiceLink[]
+  location_services?: { service_id: number }[]
+  created_at: string
+  updated_at: string
+}
+
+export interface LocationServiceLink {
+  service_id: number
+  service_name: string
 }
 
 export interface Material {
@@ -189,6 +251,7 @@ export interface Project {
   available_from: string | null
   available_to: string | null
   created_at: string
+  deleted?: boolean
 }
 
 export interface Payment {
@@ -206,10 +269,10 @@ export interface Payment {
 
 export interface ApiKey {
   id: number
-  account: string | null
+  account_id: string | null
   name: string
   key: string
-  domain: string
+  domain_id: number | null
   description: string
   created_at: string
   updated_at: string
@@ -250,6 +313,7 @@ export interface PlaceSuggestion {
   main_text: string
   secondary_text: string
   description: string
+  types?: string[]
 }
 
 export interface PlaceDetails {
@@ -258,6 +322,11 @@ export interface PlaceDetails {
   city: string
   state: string
   postal_code: string
+  county: string
+  country: string
+  short_state: string
+  latitude: number | null
+  longitude: number | null
 }
 
 export interface Company {
@@ -275,9 +344,9 @@ async function request<T>(path: string, options: RequestInit = {}, redirectOn401
   if (config === null) await loadConfig()
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   }
+  if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json'
   const token = getToken()
   if (token) headers.Authorization = `Token ${token}`
   if (config?.csrf) headers['X-CSRFToken'] = config.csrf
@@ -290,11 +359,18 @@ async function request<T>(path: string, options: RequestInit = {}, redirectOn401
     throw new Error('Unauthorized')
   }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    const detail = (body as Record<string, unknown>).detail
+    const text = await res.text()
+    const body = (() => {
+      try {
+        return JSON.parse(text) as Record<string, unknown>
+      } catch {
+        return {}
+      }
+    })()
+    const detail = body.detail
     if (typeof detail === 'string') throw new Error(detail)
     if (body && typeof body === 'object') {
-      const firstFieldError = Object.values(body as Record<string, unknown>).find(
+      const firstFieldError = Object.values(body).find(
         (v) => typeof v === 'string' || (Array.isArray(v) && typeof v[0] === 'string'),
       )
       if (typeof firstFieldError === 'string') throw new Error(firstFieldError)
@@ -302,14 +378,161 @@ async function request<T>(path: string, options: RequestInit = {}, redirectOn401
         throw new Error(firstFieldError[0])
       }
     }
+    if (res.status >= 500) {
+      const exc = text.match(/Exception Value[^<]*<pre[^>]*>([\s\S]*?)<\/pre>/)
+      const title = text.match(/<title>([\s\S]*?)<\/title>/)
+      if (exc) throw new Error(exc[1].trim())
+      if (title) throw new Error(title[1].trim())
+    }
     throw new Error(`Request failed (${res.status})`)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
-export const api = {
-  login: (username: string) =>
+function placesKey(): string {
+  return (import.meta.env.VITE_GOOGLE_PLACES_API_KEY as string | undefined) ?? ''
+}
+
+interface PlacePrediction {
+  place_id: string
+  description: string
+  types?: string[]
+  structured_formatting?: { main_text: string; secondary_text: string }
+}
+
+interface PlaceResult {
+  formatted_address?: string
+  address_components?: Array<{ long_name?: string; short_name?: string; types: string[] }>
+  geometry?: { location: { lat: () => number; lng: () => number } }
+}
+
+interface GooglePlacesLib {
+  AutocompleteService: new () => {
+    getPlacePredictions(
+      req: {
+        input: string
+        componentRestrictions?: { country: string }
+        types?: string[]
+      },
+      cb: (predictions: PlacePrediction[] | null, status: string) => void,
+    ): void
+  }
+  PlacesService: new (el: HTMLElement) => {
+    getDetails(
+      req: { placeId: string },
+      cb: (place: PlaceResult | null, status: string) => void,
+    ): void
+  }
+  PlacesServiceStatus: Record<string, string>
+}
+
+declare global {
+  interface Window {
+    google?: { maps?: { places?: GooglePlacesLib } }
+  }
+}
+
+let placesScriptPromise: Promise<GooglePlacesLib> | null = null
+
+function loadPlacesScript(): Promise<GooglePlacesLib> {
+  if (placesScriptPromise) return placesScriptPromise
+  placesScriptPromise = new Promise((resolve, reject) => {
+    const key = placesKey()
+    if (!key) {
+      reject(new Error('Google Places API key is not configured'))
+      return
+    }
+    const existing = window.google?.maps?.places
+    if (existing) {
+      resolve(existing)
+      return
+    }
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&language=en`
+    script.async = true
+    script.onload = () => {
+      const places = window.google?.maps?.places
+      if (places) resolve(places)
+      else reject(new Error('Google Places library failed to load'))
+    }
+    script.onerror = () => reject(new Error('Failed to load Google Places script'))
+    document.head.appendChild(script)
+  })
+  return placesScriptPromise
+}
+
+async function placesAutocomplete(q: string): Promise<{ results: PlaceSuggestion[] }> {
+  const places = await loadPlacesScript()
+  return new Promise((resolve) => {
+    const service = new places.AutocompleteService()
+    service.getPlacePredictions(
+      { input: q, componentRestrictions: { country: 'us' }, types: ['(regions)'] },
+      (predictions, status) => {
+        if (status !== places.PlacesServiceStatus.OK || !predictions) {
+          resolve({ results: [] })
+          return
+        }
+        resolve({
+          results: predictions.map((p) => ({
+            place_id: p.place_id,
+            main_text: p.structured_formatting?.main_text ?? p.description,
+            secondary_text: p.structured_formatting?.secondary_text ?? '',
+            description: p.description,
+            types: p.types,
+          })),
+        })
+      },
+    )
+  })
+}
+
+async function placeDetails(placeId: string): Promise<PlaceDetails> {
+  const places = await loadPlacesScript()
+  return new Promise((resolve) => {
+    const service = new places.PlacesService(document.createElement('div'))
+    service.getDetails({ placeId }, (place, status) => {
+      if (status !== places.PlacesServiceStatus.OK || !place) {
+        resolve({
+          formatted_address: '', street: '', city: '', state: '', postal_code: '',
+          county: '', country: '', short_state: '', latitude: null, longitude: null,
+        })
+        return
+      }
+      const components = place.address_components ?? []
+
+      function byType(types: string[]): string {
+        return (
+          components.find((c) => types.some((t) => c.types.includes(t)))?.long_name ?? ''
+        )
+      }
+      function byShortType(types: string[]): string {
+        return (
+          components.find((c) => types.some((t) => c.types.includes(t)))?.short_name ?? ''
+        )
+      }
+
+      const streetNumber = byType(['street_number'])
+      const route = byType(['route'])
+      const geometry = place.geometry?.location
+      const round6 = (n: number) => Math.round(n * 1e6) / 1e6
+      resolve({
+        formatted_address: place.formatted_address ?? '',
+        street: `${streetNumber} ${route}`.trim(),
+        city: byType(['locality', 'sublocality_level_1', 'administrative_area_level_2']),
+        state: byType(['administrative_area_level_1']),
+        postal_code: byType(['postal_code']),
+        county: byType(['administrative_area_level_2']),
+        country: byType(['country']),
+        short_state: byShortType(['administrative_area_level_1']),
+        latitude: geometry ? round6(geometry.lat()) : null,
+        longitude: geometry ? round6(geometry.lng()) : null,
+      })
+    })
+  })
+}
+
+export const api = {  login: (username: string) =>
     request<{ token: string; user: User }>('/auth/login/', {
       method: 'POST',
       body: JSON.stringify({ username }),
@@ -385,10 +608,8 @@ export const api = {
     request<Address>(`/users/${userId}/addresses/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteAddress: (userId: number, id: number) =>
     request<void>(`/users/${userId}/addresses/${id}/`, { method: 'DELETE' }),
-  placesAutocomplete: (q: string) =>
-    request<{ results: PlaceSuggestion[] }>(`/places/autocomplete/?q=${encodeURIComponent(q)}`),
-  placeDetails: (placeId: string) =>
-    request<PlaceDetails>(`/places/details/?place_id=${encodeURIComponent(placeId)}`),
+  placesAutocomplete: (q: string) => placesAutocomplete(q),
+  placeDetails: (placeId: string) => placeDetails(placeId),
   orders: () => request<Order[]>('/orders/'),
   createOrder: (payload: OrderPayload) =>
     request<Order>('/orders/', { method: 'POST', body: JSON.stringify(payload) }),
@@ -402,6 +623,36 @@ export const api = {
   updateService: (id: number, payload: Partial<Service>) =>
     request<Service>(`/services/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteService: (id: number) => request<void>(`/services/${id}/`, { method: 'DELETE' }),
+  restoreService: (id: number) =>
+    request<Service>(`/services/${id}/restore`, { method: 'POST' }),
+  categories: (search?: string) =>
+    request<Category[]>(`/categories/${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  category: (id: number) => request<Category>(`/categories/${id}/`),
+  createCategory: (name: string, fullName = '', description = '', tags = '') =>
+    request<Category>('/categories/', {
+      method: 'POST',
+      body: JSON.stringify({ name, full_name: fullName, description, tags }),
+    }),
+  deleteCategory: (id: number) => request<void>(`/categories/${id}/`, { method: 'DELETE' }),
+  updateCategory: (id: number, name: string, fullName = '', description = '', tags = '') =>
+    request<Category>(`/categories/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name, full_name: fullName, description, tags }),
+    }),
+  locations: (search?: string) =>
+    request<Location[]>(`/locations/${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  location: (id: number) => request<Location>(`/locations/${id}/`),
+  createLocation: (payload: Partial<Location>) =>
+    request<Location>('/locations/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateLocation: (id: number, payload: Partial<Location>) =>
+    request<Location>(`/locations/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteLocation: (id: number) => request<void>(`/locations/${id}/`, { method: 'DELETE' }),
   materials: () => request<Material[]>('/materials/'),
   createMaterial: (payload: Partial<Material>) =>
     request<Material>('/materials/', { method: 'POST', body: JSON.stringify(payload) }),
@@ -416,6 +667,9 @@ export const api = {
   project: (id: number) => request<Project>(`/projects/${id}/`),
   updateProject: (id: number, payload: Partial<Project>) =>
     request<Project>(`/projects/${id}/`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteProject: (id: number) => request<void>(`/projects/${id}/`, { method: 'DELETE' }),
+  restoreProject: (id: number) =>
+    request<Project>(`/projects/${id}/restore`, { method: 'POST' }),
   invoices: () => request<Invoice[]>('/invoices/'),
   payments: () => request<Payment[]>('/payments/'),
   apiKeys: (account_id: string | null = null) =>
@@ -433,10 +687,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  createApiKey: (name: string, description = '', domain = '', account_id: string | null = null) =>
+  createApiKey: (name: string, description = '', domain_id: number | null = null, account_id: string | null = null) =>
     request<ApiKey>('/api-keys/create', {
       method: 'POST',
-      body: JSON.stringify({ name, description, domain, account_id }),
+      body: JSON.stringify({ name, description, domain_id, account_id }),
     }),
   deleteApiKey: (id: number) => request<void>(`/api-keys/${id}`, { method: 'DELETE' }),
   apiDomains: (account_id: string | null = null) =>

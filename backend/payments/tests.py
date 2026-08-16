@@ -63,7 +63,7 @@ class ServiceTests(AuthenticatedTestCase):
 
     def test_services_are_owned(self):
         other = User.objects.create_user(username='svcother', password='x')
-        Service.objects.create(user=other, owner=other, name='Other', amount=10)
+        Service.objects.create(user=other, owner=other, name='Other', price=10)
         res = self.client.get('/api/v1/services')
         self.assertEqual(len(res.data), 0)
 

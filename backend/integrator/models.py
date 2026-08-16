@@ -54,7 +54,9 @@ class ApiKey(models.Model):
     )
     name = models.CharField(max_length=100)
     key = models.CharField(max_length=64, unique=True, editable=False)
-    domain = models.CharField(max_length=255, blank=True)
+    domain = models.ForeignKey(
+        'ApiDomain', on_delete=models.SET_NULL, null=True, blank=True, related_name='api_keys'
+    )
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -66,20 +68,23 @@ class ApiKey(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.name} ({self.company.name})'
+        return f'{self.name} ({self.account.uuid})'
 
 
 class ApiDomain(models.Model):
     account = models.ForeignKey(
         'Account', on_delete=models.CASCADE, related_name='api_domains'
     )
-    domain = models.CharField(max_length=255)
+    domain = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['domain']
+        constraints = [
+            models.UniqueConstraint(fields=['id', 'account_id'], name='uniq_apidomain_id_account'),
+        ]
 
     def __str__(self):
         return f'{self.domain} ({self.account.uuid})'

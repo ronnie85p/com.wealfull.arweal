@@ -11,7 +11,7 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'amount', 'currency', 'status', 'created_at']
+    list_display = ['name', 'user', 'price', 'currency', 'status', 'created_at']
     list_filter = ['status', 'currency']
 
 
