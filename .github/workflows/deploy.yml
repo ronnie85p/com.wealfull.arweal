@@ -88,6 +88,11 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Create frontend production env
+        working-directory: frontend
+        run: |
+          echo "VITE_GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY }}" > .env.production
+
       - name: Build frontend
         working-directory: frontend
         run: |
