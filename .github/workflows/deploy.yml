@@ -133,7 +133,7 @@ jobs:
               echo "Migration failed - rolling back to previously applied migrations"
               grep -E "^\[X\] +[a-z_]+\.[0-9]+_" /tmp/migrations_plan_before.txt \
                 | sed -E "s/^\[X\] +([a-z_]+)\.([0-9]+_[a-z0-9_]+).*/\1 \2/" \
-                | awk '{ seen[$1] = $2 } END { for (app in seen) print app, seen[app] }' \
+                | awk "{ seen[\$1] = \$2 } END { for (app in seen) print app, seen[app] }" \
                 | tac > /tmp/applied_before.txt
               while read -r app mig; do
                 [ -z "$app" ] && continue
