@@ -195,47 +195,49 @@ export default function CompanyHeader() {
         </div>
       )}
       </div>
-      <div className="assets-menu" ref={assetsRef}>
-        <button
-          type="button"
-          className="assets-trigger"
-          onClick={() => setAssetsOpen((v) => !v)}
+      <div className="header-nav">
+        <div className="assets-menu" ref={assetsRef}>
+          <button
+            type="button"
+            className="assets-trigger"
+            onClick={() => setAssetsOpen((v) => !v)}
+          >
+            Assets
+            <span className="company-caret">▾</span>
+          </button>
+          {assetsOpen && (
+            <div className="assets-dropdown">
+              {assetsItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setAssetsOpen(false)}
+                  className={({ isActive }) =>
+                    isActive ? 'assets-link active' : 'assets-link'
+                  }
+                >
+                  <Icon name={item.icon} />
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+        <NavLink
+          to={`${base}/orders`}
+          className={({ isActive }) => (isActive ? 'assets-trigger active' : 'assets-trigger')}
         >
-          Assets
-          <span className="company-caret">▾</span>
-        </button>
-        {assetsOpen && (
-          <div className="assets-dropdown">
-            {assetsItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setAssetsOpen(false)}
-                className={({ isActive }) =>
-                  isActive ? 'assets-link active' : 'assets-link'
-                }
-              >
-                <Icon name={item.icon} />
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
-        )}
+          <Icon name="orders" />
+          Orders
+        </NavLink>
+        <NavLink
+          to={`${base}/customers`}
+          className={({ isActive }) => (isActive ? 'assets-trigger active' : 'assets-trigger')}
+        >
+          <Icon name="customers" />
+          Customers
+        </NavLink>
       </div>
-      <NavLink
-        to={`${base}/orders`}
-        className={({ isActive }) => (isActive ? 'assets-trigger active' : 'assets-trigger')}
-      >
-        <Icon name="orders" />
-        Orders
-      </NavLink>
-      <NavLink
-        to={`${base}/customers`}
-        className={({ isActive }) => (isActive ? 'assets-trigger active' : 'assets-trigger')}
-      >
-        <Icon name="customers" />
-        Customers
-      </NavLink>
     </div>
   )
 }

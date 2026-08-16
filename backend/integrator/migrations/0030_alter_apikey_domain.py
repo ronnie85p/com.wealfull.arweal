@@ -4,6 +4,15 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def clear_domain_values(apps, schema_editor):
+    schema_editor.execute(
+        'ALTER TABLE integrator_apikey MODIFY COLUMN domain VARCHAR(255) NULL'
+    )
+    schema_editor.execute(
+        'UPDATE integrator_apikey SET domain = NULL'
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,6 +20,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(clear_domain_values, migrations.RunPython.noop),
         migrations.AlterField(
             model_name='apikey',
             name='domain',

@@ -15,6 +15,18 @@ function menu(base: string) {
   ]
 }
 
+function mobileMenu(base: string) {
+  return [
+    { to: `${base}/services`, label: 'Services', end: false },
+    { to: `${base}/categories`, label: 'Categories', end: false },
+    { to: `${base}/locations`, label: 'Locations', end: false },
+    { to: `${base}/projects`, label: 'Projects', end: false },
+    { to: `${base}/employers`, label: 'Employers', end: false },
+    { to: `${base}/orders`, label: 'Orders', end: false },
+    { to: `${base}/customers`, label: 'Customers', end: false },
+  ]
+}
+
 const apiItem = (base: string) => ({ to: `${base}/api`, label: 'Api', end: false })
 
 function initials(name: string): string {
@@ -31,6 +43,7 @@ export default function Layout() {
   const { user: ctxUser } = useAuth()
   const { account, accountLoading } = useAccountContext()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
   const user = account?.user ?? ctxUser
 
@@ -39,6 +52,7 @@ export default function Layout() {
   const accountTypeName = account?.account_type?.name ?? user?.account_type ?? ''
   const base = useAccountBase()
   const items = menu(base)
+  const mobileItems = mobileMenu(base)
   const apiLink = apiItem(base)
 
   useEffect(() => {
@@ -67,7 +81,21 @@ export default function Layout() {
   return (
     <div className="layout">
       <header className="app-header">
-        <CompanyHeader />
+        <div className="app-header-left">
+          <button
+            type="button"
+            className="menu-toggle"
+            aria-label="Menu"
+            onClick={() => setSidebarOpen((v) => !v)}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <CompanyHeader />
+        </div>
         <div className="app-header-right">
           <div className="profile-menu" ref={profileRef}>
             <button
@@ -108,28 +136,46 @@ export default function Layout() {
         </div>
       </header>
       <div className="layout-body">
-        <aside className="sidebar">
+        {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
+        <aside className={sidebarOpen ? 'sidebar open' : 'sidebar'}>
           <nav className="nav">
             {items.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
+                onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
               >
                 {item.label}
               </NavLink>
             ))}
             <div className="nav-divider" />
+            <div className="mobile-nav">
+              {mobileItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+              <div className="nav-divider" />
+            </div>
             <NavLink
               to={apiLink.to}
               end={apiLink.end}
+              onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             >
 {apiLink.label}
           </NavLink>
           <NavLink
             to="/docs"
+            onClick={() => setSidebarOpen(false)}
             className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
           >
             Docs
